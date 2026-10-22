@@ -12,6 +12,10 @@ describe("dailyRateCents", () => {
   it("respects a per-piece override", () => {
     expect(dailyRateCents(50_000, 1234)).toBe(1234);
   });
+  it("requires an override for placeholder retail prices", () => {
+    expect(() => dailyRateCents(100_000_000)).toThrow(/placeholder/);
+    expect(dailyRateCents(100_000_000, 15_000)).toBe(15_000);
+  });
 });
 
 describe("quoteRental", () => {

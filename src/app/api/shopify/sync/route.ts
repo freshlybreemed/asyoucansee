@@ -3,7 +3,12 @@ import { env } from "@/lib/env";
 import { fetchAllPieces } from "@/lib/shopify/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 
-/** Mirror Shopify products into `pieces`. Leaves rental fields (is_rentable, daily_rate_cents) untouched. */
+const RENTAL_ONLY = /rental\s*only/i;
+
+/**
+ * Mirror Shopify products into `pieces`. Leaves rental fields (is_rentable, daily_rate_cents) untouched,
+ * except titles marked "rental only", which are always rentable.
+ */
 export async function POST(request: Request) {
   if (request.headers.get("authorization") !== `Bearer ${env("CRON_SECRET")}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -25,5 +30,14 @@ export async function POST(request: Request) {
       { onConflict: "shopify_product_id" },
     );
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ synced: pieces.length });
+
+  const rentalOnly = pieces.filter((p) => RENTAL_ONLY.test(p.title)).map((p) => p.productId);
+  if (rentalOnly.length) {
+    const { error: flagError } = await createAdminClient()
+      .from("pieces")
+      .update({ is_rentable: true })
+      .in("shopify_product_id", rentalOnly);
+    if (flagError) return NextResponse.json({ error: flagError.message }, { status: 500 });
+  }
+  return NextResponse.json({ synced: pieces.length, rentalOnly: rentalOnly.length });
 }

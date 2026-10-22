@@ -51,8 +51,8 @@ export interface ShopifyPiece {
 }
 
 const PRODUCTS_QUERY = `
-  query Products($cursor: String) {
-    products(first: 100, after: $cursor) {
+  query Products($cursor: String, $search: String) {
+    products(first: 100, after: $cursor, query: $search) {
       pageInfo { hasNextPage endCursor }
       nodes {
         id title vendor
@@ -75,12 +75,15 @@ type ProductsResponse = {
   };
 };
 
-/** Every product's first variant. Archive pieces are one-of-one, so one variant is the norm. */
-export async function fetchAllPieces(): Promise<ShopifyPiece[]> {
+/**
+ * Each product's first variant (archive pieces are one-of-one). Defaults to active, in-stock
+ * products; the store keeps thousands of sold pieces at 0 inventory.
+ */
+export async function fetchAllPieces(search = "status:active AND inventory_total:>0"): Promise<ShopifyPiece[]> {
   const pieces: ShopifyPiece[] = [];
   let cursor: string | null = null;
   do {
-    const data: ProductsResponse = await shopifyAdmin<ProductsResponse>(PRODUCTS_QUERY, { cursor });
+    const data: ProductsResponse = await shopifyAdmin<ProductsResponse>(PRODUCTS_QUERY, { cursor, search });
     for (const p of data.products.nodes) {
       const v = p.variants.nodes[0];
       if (!v) continue;

@@ -9,6 +9,8 @@ export const PRICING = {
   /** Default daily rate as a fraction of retail when a piece has no override. */
   dailyRateOfRetail: 0.08,
   minDailyRateCents: 2500,
+  /** Above this retail price the Shopify price is a placeholder (e.g. "rental only" at $1M); require an override. */
+  maxDerivedRetailCents: 2_000_000,
   /** Discount on each day by bracket: days 1–3 full, 4–7 at 80%, 8+ at 60%. */
   durationBrackets: [
     { fromDay: 1, factor: 1 },
@@ -70,6 +72,9 @@ function dateRange(start: string, days: number): string[] {
 
 export function dailyRateCents(retailPriceCents: number, override?: number | null, cfg = PRICING): number {
   if (override != null) return override;
+  if (retailPriceCents > cfg.maxDerivedRetailCents) {
+    throw new Error("Retail price looks like a placeholder; set a daily rate for this piece");
+  }
   return Math.max(cfg.minDailyRateCents, Math.round(retailPriceCents * cfg.dailyRateOfRetail));
 }
 
