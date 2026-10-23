@@ -1,4 +1,5 @@
 import { AdminError } from "@/components/admin-error";
+import { PHOTO_BUCKET } from "@/lib/consignment-photos";
 import { createAdminClient } from "@/lib/supabase/server";
 import { setConsignmentStatus } from "../actions";
 
@@ -11,6 +12,13 @@ export default async function AdminConsignments({ searchParams }: { searchParams
     .select("*")
     .order("created_at", { ascending: false });
   if (loadError) throw new Error(loadError.message);
+
+  // Photos are private; sign short-lived links for this page view.
+  const paths: string[] = data.flatMap((c) => c.photo_paths ?? []);
+  const signed = paths.length
+    ? (await createAdminClient().storage.from(PHOTO_BUCKET).createSignedUrls(paths, 60 * 60)).data ?? []
+    : [];
+  const photoUrl = new Map(signed.flatMap((s) => (s.path && s.signedUrl ? [[s.path, s.signedUrl] as const] : [])));
 
   return (
     <div className="space-y-6">
@@ -27,8 +35,20 @@ export default async function AdminConsignments({ searchParams }: { searchParams
               <p><span className="text-neutral-500">Designers:</span> {c.designers}</p>
               <p className="whitespace-pre-wrap">{c.items}</p>
               {c.estimated_value && <p><span className="text-neutral-500">Est. value:</span> {c.estimated_value}</p>}
+              {c.photo_paths?.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {(c.photo_paths as string[]).map((p) =>
+                    photoUrl.has(p) ? (
+                      <a key={p} href={photoUrl.get(p)} target="_blank" rel="noreferrer">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- signed storage URL */}
+                        <img src={photoUrl.get(p)} alt="" className="h-24 w-24 object-cover" />
+                      </a>
+                    ) : null,
+                  )}
+                </div>
+              )}
               {c.photos_url && (
-                <a href={c.photos_url} target="_blank" rel="noreferrer" className="underline">Photos</a>
+                <a href={c.photos_url} target="_blank" rel="noreferrer" className="underline">More photos</a>
               )}
             </div>
             <form action={setConsignmentStatus.bind(null, c.id)} className="space-y-2">
