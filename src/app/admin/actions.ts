@@ -51,13 +51,18 @@ export async function rentalAction(rentalId: string, action: RentalAction) {
         await chargeSavedCard(member.stripe_customer_id, r.quoted_cents - r.paid_cents, `Rental: ${piece?.title}`, `rental-${r.id}`);
         Object.assign(update, { paid_cents: r.quoted_cents, paid_at: new Date().toISOString(), payment_method: "stripe" });
       }
+      // Hold the piece off Shopify from confirmation so nobody buys it before pickup.
+      if (piece) await adjustAvailable(piece.shopify_inventory_item_id, -1, "rental_hold");
       message = ["Rental confirmed", `${piece?.title} is yours ${r.starts_on} to ${r.due_on}. See you at the showroom.`];
     }
     if (action === "decline") {
       message = ["Rental request update", `${piece?.title} isn't available for ${r.starts_on} to ${r.due_on}. Reply and we'll find you something.`];
     }
+    if (action === "cancel") {
+      if (piece) await adjustAvailable(piece.shopify_inventory_item_id, 1, "rental_return");
+      message = ["Rental cancelled", `Your booking for ${piece?.title} (${r.starts_on} to ${r.due_on}) is cancelled.`];
+    }
     if (action === "check_out") {
-      if (piece) await adjustAvailable(piece.shopify_inventory_item_id, -1, "rental_out");
       update.checked_out_at = new Date().toISOString();
       message = ["Enjoy the piece", `${piece?.title} is due back ${r.due_on}. Late returns are $30/day.`];
     }

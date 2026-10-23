@@ -111,7 +111,7 @@ export async function fetchAllPieces(search = "status:active AND inventory_total
  * Pull a piece off the Shopify storefront while it's out on rental (delta -1 → sold out),
  * and put it back on return (delta +1).
  */
-export async function adjustAvailable(inventoryItemId: string, delta: number, reason: "rental_out" | "rental_return") {
+export async function adjustAvailable(inventoryItemId: string, delta: number, reason: "rental_hold" | "rental_return") {
   const data = await shopifyAdmin<{
     inventoryAdjustQuantities: { userErrors: { field: string[]; message: string }[] };
   }>(

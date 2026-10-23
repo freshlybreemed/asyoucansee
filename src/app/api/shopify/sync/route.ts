@@ -5,8 +5,8 @@ import { fetchAllPieces } from "@/lib/shopify/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 
 /**
- * Mirror Shopify products into `pieces`. Leaves rental fields (is_rentable, daily_rate_cents) untouched,
- * except rental-only listings (title marker or placeholder price), which are always rentable.
+ * Mirror Shopify products into `pieces`. New pieces are rentable by default; existing rental fields
+ * (is_rentable, daily_rate_cents) are left untouched, except rental-only listings, which are always rentable.
  */
 export async function POST(request: Request) {
   if (request.headers.get("authorization") !== `Bearer ${env("CRON_SECRET")}`) {

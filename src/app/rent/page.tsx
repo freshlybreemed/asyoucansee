@@ -1,25 +1,27 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ProductGrid } from "@/components/product-card";
-import { getProductsByIds } from "@/lib/shopify/catalog";
+import { NextPage, ProductGrid } from "@/components/product-card";
+import { listProducts } from "@/lib/shopify/catalog";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Rent" };
-export const revalidate = 300;
 
 const steps = [
-  "Join free and save a card to your account.",
+  "Join free. It takes a minute.",
   "Pick a piece and your dates. You'll see the price right away.",
   "We confirm by text or email. Pick up at the showroom.",
   "Return by the due date. Late returns are $30/day.",
 ];
 
-export default async function RentPage() {
-  const { data, error } = await createAdminClient().from("pieces").select("shopify_product_id").eq("is_rentable", true);
+export default async function RentPage({ searchParams }: { searchParams: Promise<{ after?: string }> }) {
+  const { after } = await searchParams;
+  // Everything in stock is rentable unless an admin opted it out.
+  const [{ products, nextCursor }, { data: optedOut, error }] = await Promise.all([
+    listProducts({ after }),
+    createAdminClient().from("pieces").select("shopify_product_id").eq("is_rentable", false),
+  ]);
   if (error) throw new Error(error.message);
-  const products = (await getProductsByIds(data.map((p) => p.shopify_product_id))).filter(
-    (p) => p.status === "ACTIVE" && p.totalInventory > 0,
-  );
+  const hidden = new Set(optedOut.map((p) => p.shopify_product_id));
 
   return (
     <div className="space-y-12">
@@ -27,7 +29,8 @@ export default async function RentPage() {
         <div className="space-y-3">
           <h1 className="text-3xl font-semibold md:text-4xl">Rent the archive</h1>
           <p className="text-neutral-600">
-            Runway and archive pieces for the event, the shoot, the night out. Members only, and membership is free.
+            Every piece in the shop is available to rent. For the event, the shoot, the night out. Members only, and
+            membership is free.
           </p>
           <Link href="/signup" className="inline-block bg-black px-6 py-3 text-xs uppercase tracking-widest text-white">
             Join free
@@ -42,7 +45,8 @@ export default async function RentPage() {
           ))}
         </ol>
       </div>
-      <ProductGrid products={products} />
+      <ProductGrid products={products.filter((p) => !hidden.has(p.id))} />
+      <NextPage cursor={nextCursor} basePath="/rent" />
     </div>
   );
 }
