@@ -5,6 +5,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: { default: "As You Can See", template: "%s · As You Can See" },
   description: "Archive designer pieces to buy and rent. Rick Owens, Jean Paul Gaultier, Marni, Margiela, Chanel and more.",
+  // Preview builds stay out of search so they don't compete with the live asyoucansee.com.
+  robots: process.env.ALLOW_INDEXING === "true" ? undefined : { index: false, follow: false },
 };
 
 const nav = [
