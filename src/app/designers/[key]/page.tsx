@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { NextPage, ProductGrid } from "@/components/product-card";
+import { NextPage, PageHeader, ProductGrid } from "@/components/product-card";
 import { findDesigner } from "@/lib/catalog/designers";
 import { listProducts } from "@/lib/shopify/catalog";
 
@@ -20,8 +20,8 @@ export default async function DesignerPage({
   if (!designer) notFound();
   const { products, nextCursor } = await listProducts({ vendors: designer.spellings, after });
   return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-semibold">{designer.name}</h1>
+    <div>
+      <PageHeader title={designer.name}>{designer.count} pieces in the collection.</PageHeader>
       <ProductGrid products={products} />
       <NextPage cursor={nextCursor} basePath={`/designers/${key}`} />
     </div>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PageHeader } from "@/components/product-card";
 import { listDesigners } from "@/lib/catalog/designers";
 
 export const metadata: Metadata = { title: "Designers" };
@@ -13,15 +14,15 @@ export default async function DesignersPage() {
     byLetter.set(letter, [...(byLetter.get(letter) ?? []), d]);
   }
   return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-semibold">Designers</h1>
-      <div className="columns-2 gap-8 md:columns-4">
+    <div>
+      <PageHeader title="Designers" />
+      <div className="columns-2 gap-10 md:columns-4">
         {[...byLetter.entries()].map(([letter, list]) => (
-          <div key={letter} className="mb-6 break-inside-avoid">
-            <p className="mb-2 text-xs text-neutral-400">{letter}</p>
+          <div key={letter} className="mb-8 break-inside-avoid">
+            <p className="display mb-3 text-3xl text-oxblood">{letter}</p>
             {list.map((d) => (
-              <Link key={d.key} href={`/designers/${d.key}`} className="block py-0.5 text-sm hover:underline">
-                {d.name} <span className="text-neutral-400">{d.count}</span>
+              <Link key={d.key} href={`/designers/${d.key}`} className="block py-1 text-sm hover:text-oxblood">
+                {d.name} <span className="text-smoke">{d.count}</span>
               </Link>
             ))}
           </div>

@@ -5,7 +5,7 @@ import { MAX_PHOTOS, PHOTO_BUCKET } from "@/lib/consignment-photos";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
 import { createPhotoUploads, submitConsignment, type ConsignState } from "./actions";
 
-const field = "w-full border px-3 py-2 text-sm";
+const field = "field";
 const MAX_EDGE = 2400;
 
 /** Shrink big phone photos before upload. Falls back to the original if the browser can't decode it (e.g. HEIC). */
@@ -40,7 +40,7 @@ export function ConsignForm() {
   }, [photos]);
 
   if (state.ok) {
-    return <p className="border p-6">Got it. We review every submission and will reach out within a few days.</p>;
+    return <p className="wide text-lg">Got it. We review every submission and will reach out within a few days.</p>;
   }
 
   function addPhotos(files: FileList | null) {
@@ -85,10 +85,10 @@ export function ConsignForm() {
       <input name="designers" placeholder="Designers (e.g. Rick Owens, JPG, Margiela)" required className={field} />
       <textarea name="items" rows={5} placeholder="What are you selling? Pieces, seasons, sizes, condition." required className={field} />
 
-      <div className="space-y-2 border border-dashed p-4">
+      <div className="space-y-3 rounded-lg border border-dashed border-ink/30 p-4">
         <label className="block cursor-pointer text-sm">
-          <span className="underline">Add photos</span>
-          <span className="text-neutral-500"> · front, back, labels, any wear. Up to {MAX_PHOTOS}.</span>
+          <span className="font-medium underline underline-offset-4">Add photos</span>
+          <span className="text-smoke">. Front, back, labels, any wear. Up to {MAX_PHOTOS}.</span>
           <input
             name="photos"
             type="file"
@@ -104,13 +104,13 @@ export function ConsignForm() {
         {previews.length > 0 && (
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
             {previews.map((src, i) => (
-              <div key={src} className="relative aspect-square bg-neutral-100">
+              <div key={src} className="relative aspect-square overflow-hidden rounded bg-plate">
                 {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview */}
                 <img src={src} alt="" className="h-full w-full object-cover" />
                 <button
                   type="button"
                   onClick={() => setPhotos(photos.filter((_, j) => j !== i))}
-                  className="absolute right-1 top-1 bg-white/90 px-1.5 text-xs"
+                  className="absolute right-1 top-1 rounded-full bg-paper px-2 text-xs"
                   aria-label="Remove photo"
                 >
                   ×
@@ -125,8 +125,8 @@ export function ConsignForm() {
         <input name="estimatedValue" placeholder="Rough total value (optional)" className={field} />
         <input name="photosUrl" placeholder="Or a link to more photos (optional)" className={field} />
       </div>
-      {(uploadError || state.error) && <p className="text-sm text-red-600">{uploadError ?? state.error}</p>}
-      <button disabled={pending} className="w-full bg-black py-3 text-xs uppercase tracking-widest text-white disabled:opacity-50">
+      {(uploadError || state.error) && <p className="text-sm text-red-700">{uploadError ?? state.error}</p>}
+      <button disabled={pending} className="btn w-full">
         {uploading ? "Uploading photos…" : submitting ? "Sending…" : "Submit your pieces"}
       </button>
     </form>

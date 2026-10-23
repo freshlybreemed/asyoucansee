@@ -18,29 +18,29 @@ export default function SellPage() {
   return (
     <div className="grid gap-12 md:grid-cols-2">
       <div className="space-y-8">
-        <div className="space-y-3">
-          <h1 className="text-3xl font-semibold md:text-4xl">Sell with us</h1>
-          <p className="text-neutral-600">
+        <div className="space-y-6">
+          <h1 className="page-title">Sell with us</h1>
+          <p className="max-w-md text-lg text-smoke">
             Consign your closet with As You Can See. We handle everything (authentication, photography, pricing, and
             selling) and put your pieces in front of buyers who know what they&apos;re looking at.
           </p>
         </div>
-        <ol className="space-y-5">
+        <ol className="space-y-4">
           {steps.map((s, i) => (
-            <li key={s.title} className="grid grid-cols-[2rem_1fr] gap-2">
-              <span className="text-sm text-neutral-400">{String(i + 1).padStart(2, "0")}</span>
+            <li key={s.title} className="grid grid-cols-[3rem_1fr] border-t border-ink/15 pt-4">
+              <span className="display text-2xl text-oxblood">{i + 1}</span>
               <div>
-                <p className="font-medium">{s.title}</p>
-                <p className="text-sm text-neutral-600">{s.body}</p>
+                <p className="wide">{s.title}</p>
+                <p className="text-sm text-smoke">{s.body}</p>
               </div>
             </li>
           ))}
         </ol>
-        <p className="text-sm text-neutral-600">
-          See what we&apos;ve placed: <Link href="/archive" className="underline">the sold archive</Link>.
+        <p className="text-sm text-smoke">
+          See what we&apos;ve placed: <Link href="/archive" className="link text-ink">the sold archive</Link>.
         </p>
       </div>
-      <div className="md:pt-16">
+      <div className="rounded-2xl bg-white p-5 md:mt-4 md:p-8">
         <ConsignForm />
       </div>
     </div>

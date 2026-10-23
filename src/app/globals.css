@@ -2,6 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-white text-neutral-900 antialiased;
+@layer base {
+  html {
+    overflow-x: clip;
+  }
+  body {
+    @apply bg-paper text-ink antialiased;
+  }
+  :focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-ink;
+  }
+  ::selection {
+    @apply bg-oxblood text-paper;
+  }
+}
+
+@layer components {
+  /* Archivo at full width: the house voice for headlines and the wordmark. */
+  .display {
+    font-stretch: 125%;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 0.92;
+  }
+  /* Designer names and section heads: wide, but quieter than display. */
+  .wide {
+    font-stretch: 115%;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .page-title {
+    @apply display text-4xl md:text-6xl;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-full bg-ink px-7 py-3.5 text-sm font-medium text-paper transition-colors hover:bg-oxblood disabled:pointer-events-none disabled:opacity-40;
+    font-stretch: 112%;
+  }
+  .btn-line {
+    @apply btn border border-ink bg-transparent text-ink hover:bg-ink hover:text-paper;
+  }
+  .btn-paper {
+    @apply btn bg-paper text-ink hover:bg-white;
+  }
+  .btn-ghost {
+    @apply btn border border-paper/40 bg-transparent text-paper hover:border-paper hover:bg-transparent;
+  }
+
+  .field {
+    @apply w-full rounded-lg border border-ink/15 bg-white px-4 py-3 text-sm placeholder:text-smoke/70 focus:border-ink focus:outline-none;
+  }
+
+  /* Product photos are cut out on white; multiply drops the white so each piece sits on the plate. */
+  .plate {
+    @apply relative overflow-hidden bg-plate;
+  }
+  .plate img {
+    mix-blend-mode: multiply;
+  }
+
+  .link {
+    @apply underline decoration-ink/30 underline-offset-4 hover:decoration-ink;
+  }
 }

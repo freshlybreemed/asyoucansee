@@ -26,20 +26,20 @@ export default async function RentPage({ searchParams }: { searchParams: Promise
   return (
     <div className="space-y-12">
       <div className="grid gap-8 md:grid-cols-2">
-        <div className="space-y-3">
-          <h1 className="text-3xl font-semibold md:text-4xl">Rent the archive</h1>
-          <p className="text-neutral-600">
+        <div className="space-y-6">
+          <h1 className="page-title">Rent the archive</h1>
+          <p className="max-w-md text-lg text-smoke">
             Every piece in the shop is available to rent. For the event, the shoot, the night out. Members only, and
             membership is free.
           </p>
-          <Link href="/signup" className="inline-block bg-black px-6 py-3 text-xs uppercase tracking-widest text-white">
+          <Link href="/signup" className="btn">
             Join free
           </Link>
         </div>
-        <ol className="space-y-3 text-sm">
+        <ol className="space-y-4 self-end">
           {steps.map((s, i) => (
-            <li key={s} className="grid grid-cols-[2rem_1fr]">
-              <span className="text-neutral-400">{String(i + 1).padStart(2, "0")}</span>
+            <li key={s} className="grid grid-cols-[3rem_1fr] items-baseline border-t border-ink/15 pt-4">
+              <span className="display text-2xl text-oxblood">{i + 1}</span>
               <span>{s}</span>
             </li>
           ))}

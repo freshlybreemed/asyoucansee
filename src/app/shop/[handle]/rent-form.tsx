@@ -37,42 +37,43 @@ export function RentForm({ productId, signedIn }: { productId: string; signedIn:
 
   if (requested) {
     return (
-      <p className="border p-4 text-sm">
-        Request sent. We&apos;ll confirm by text or email. Track it on your <Link href="/account" className="underline">account</Link>.
+      <p className="rounded-lg bg-plate p-4 text-sm">
+        Request sent. We&apos;ll confirm by text or email. Track it on your <Link href="/account" className="link">account</Link>.
       </p>
     );
   }
 
   return (
-    <div className="space-y-3 border p-4">
-      <p className="text-xs uppercase tracking-widest">Rent this piece</p>
+    <div className="space-y-4 rounded-2xl bg-white p-5">
+      <p className="wide text-lg">Rent this piece</p>
       <div className="grid grid-cols-2 gap-2 text-sm">
         <label className="space-y-1">
-          <span className="text-neutral-500">Pick up</span>
-          <input type="date" value={startsOn} onChange={(e) => updateDates(e.target.value, dueOn)} className="w-full border px-2 py-1.5" />
+          <span className="block text-smoke">Pick up</span>
+          <input type="date" value={startsOn} onChange={(e) => updateDates(e.target.value, dueOn)} className="field py-2.5" />
         </label>
         <label className="space-y-1">
-          <span className="text-neutral-500">Return by</span>
-          <input type="date" value={dueOn} min={startsOn} onChange={(e) => updateDates(startsOn, e.target.value)} className="w-full border px-2 py-1.5" />
+          <span className="block text-smoke">Return by</span>
+          <input type="date" value={dueOn} min={startsOn} onChange={(e) => updateDates(startsOn, e.target.value)} className="field py-2.5" />
         </label>
       </div>
-      {pending && <p className="text-sm text-neutral-500">Pricing…</p>}
+      {pending && <p className="text-sm text-smoke">Pricing…</p>}
       {quote && (
-        <p className="text-sm">
-          {quote.days} day{quote.days === 1 ? "" : "s"} · <strong>{formatMoney(quote.totalCents)}</strong>
+        <p className="flex items-baseline justify-between border-t border-ink/15 pt-3">
+          <span className="text-sm text-smoke">{quote.days} day{quote.days === 1 ? "" : "s"}</span>
+          <span className="wide text-2xl tabular-nums">{formatMoney(quote.totalCents)}</span>
         </p>
       )}
-      {message && <p className="text-sm text-red-600">{message}</p>}
+      {message && <p className="text-sm text-red-700">{message}</p>}
       {signedIn ? (
-        <button onClick={submit} disabled={!quote || pending} className="w-full bg-black py-3 text-xs uppercase tracking-widest text-white disabled:opacity-40">
+        <button onClick={submit} disabled={!quote || pending} className="btn w-full">
           Request rental
         </button>
       ) : (
-        <Link href="/signup" className="block w-full border py-3 text-center text-xs uppercase tracking-widest">
+        <Link href="/signup" className="btn-line w-full">
           Join free to rent
         </Link>
       )}
-      <p className="text-xs text-neutral-500">Late returns are $30/day, charged to your card on file.</p>
+      <p className="text-xs text-smoke">Late returns are $30/day.</p>
     </div>
   );
 }

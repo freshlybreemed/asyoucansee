@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createUserClient } from "@/lib/supabase/server";
 import { signOut } from "../login/actions";
@@ -18,32 +19,32 @@ export default async function AccountPage() {
   if (!profile) redirect("/signup");
 
   return (
-    <div className="space-y-10">
-      <section className="space-y-1">
-        <h1 className="text-2xl font-semibold">{profile.full_name}</h1>
-        <p className="text-sm text-neutral-600">{profile.email} · {profile.social_handle ?? "no social"}</p>
-        <p className="text-sm text-neutral-600">
+    <div className="mx-auto max-w-3xl space-y-12">
+      <section className="space-y-2">
+        <h1 className="page-title mb-4">{profile.full_name}</h1>
+        <p className="text-smoke">{[profile.email, profile.social_handle].filter(Boolean).join(", ")}</p>
+        <p className="text-smoke">
           {profile.address_line1}, {profile.city}, {profile.region} {profile.postal_code}
         </p>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-semibold">Payment</h2>
+      <section className="space-y-4 border-t border-ink pt-5">
+        <h2 className="display text-2xl">Payment</h2>
         <CardForm hasCard={profile.has_card_on_file} />
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-semibold">Rentals</h2>
-        {!rentals?.length && <p className="text-sm text-neutral-600">No rentals yet.</p>}
-        <ul className="divide-y">
+      <section className="space-y-4 border-t border-ink pt-5">
+        <h2 className="display text-2xl">Rentals</h2>
+        {!rentals?.length && <p className="text-sm text-smoke">No rentals yet. <Link href="/rent" className="link text-ink">Find something to rent</Link>.</p>}
+        <ul className="divide-y divide-ink/10">
           {rentals?.map((r) => {
             const piece = Array.isArray(r.pieces) ? r.pieces[0] : r.pieces;
             return (
-              <li key={r.id} className="flex justify-between py-2 text-sm">
-                <span>{piece?.vendor} — {piece?.title}</span>
-                <span>
-                  {r.starts_on} → {r.due_on} · {r.status}
-                  {r.late_fee_cents > 0 && ` · late fees $${(r.late_fee_cents / 100).toFixed(2)}`}
+              <li key={r.id} className="flex flex-wrap justify-between gap-2 py-3 text-sm">
+                <span><span className="wide">{piece?.vendor}</span> <span className="text-smoke">{piece?.title}</span></span>
+                <span className="text-smoke">
+                  {r.starts_on} to {r.due_on}, {r.status.replace("_", " ")}
+                  {r.late_fee_cents > 0 && `, late fees $${(r.late_fee_cents / 100).toFixed(2)}`}
                 </span>
               </li>
             );
@@ -52,7 +53,7 @@ export default async function AccountPage() {
       </section>
 
       <form action={signOut}>
-        <button className="text-sm underline">Sign out</button>
+        <button className="link text-sm">Sign out</button>
       </form>
     </div>
   );

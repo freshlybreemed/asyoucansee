@@ -31,8 +31,8 @@ function SaveCard({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={submit} className="space-y-3">
       <PaymentElement />
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <button disabled={!stripe || saving} className="rounded bg-black px-4 py-2 text-white disabled:opacity-50">
+      {error && <p className="text-sm text-red-700">{error}</p>}
+      <button disabled={!stripe || saving} className="btn">
         {saving ? "Saving…" : "Save card"}
       </button>
     </form>
@@ -43,13 +43,13 @@ export function CardForm({ hasCard }: { hasCard: boolean }) {
   const [clientSecret, setClientSecret] = useState<string>();
   const [saved, setSaved] = useState(hasCard);
 
-  if (!stripePromise) return <p className="text-sm text-neutral-500">Card setup is coming soon.</p>;
+  if (!stripePromise) return <p className="text-sm text-smoke">No card needed yet. Pay at pickup in the showroom.</p>;
 
   if (saved && !clientSecret) {
     return (
       <p className="text-sm">
         Card on file ✓{" "}
-        <button className="underline" onClick={async () => setClientSecret((await startCardSetup()).clientSecret)}>
+        <button className="link" onClick={async () => setClientSecret((await startCardSetup()).clientSecret)}>
           Replace
         </button>
       </p>
@@ -58,7 +58,7 @@ export function CardForm({ hasCard }: { hasCard: boolean }) {
   if (!clientSecret) {
     return (
       <button
-        className="rounded bg-black px-4 py-2 text-white"
+        className="btn"
         onClick={async () => setClientSecret((await startCardSetup()).clientSecret)}
       >
         Add a card
