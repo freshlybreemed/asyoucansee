@@ -5,7 +5,8 @@ import { loadStripe } from "@stripe/stripe-js";
 import { useState } from "react";
 import { markCardSaved, startCardSetup } from "./actions";
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
 
 function SaveCard({ onDone }: { onDone: () => void }) {
   const stripe = useStripe();
@@ -41,6 +42,8 @@ function SaveCard({ onDone }: { onDone: () => void }) {
 export function CardForm({ hasCard }: { hasCard: boolean }) {
   const [clientSecret, setClientSecret] = useState<string>();
   const [saved, setSaved] = useState(hasCard);
+
+  if (!stripePromise) return <p className="text-sm text-neutral-500">Card setup is coming soon.</p>;
 
   if (saved && !clientSecret) {
     return (

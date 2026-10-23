@@ -39,7 +39,10 @@ function quoteFor(
       }),
     };
   } catch (e) {
-    return { error: e instanceof Error ? e.message : String(e) };
+    const message = e instanceof Error ? e.message : String(e);
+    // Pieces with placeholder Shopify prices need a hand-set daily rate before they can be quoted.
+    if (message.includes("placeholder")) return { error: "This piece is priced on request. Reach out and we'll quote you." };
+    return { error: message };
   }
 }
 

@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createUserClient } from "@/lib/supabase/server";
+import { createAdminClient, createUserClient } from "@/lib/supabase/server";
 
 const SignupSchema = z.object({
   fullName: z.string().trim().min(1, "Name is required"),
@@ -20,6 +20,10 @@ const SignupSchema = z.object({
 
 export type SignupState = { error?: string };
 
+/**
+ * Create the auth user and profile together with the service role, then sign in.
+ * (Client-side signUp has no session until email is confirmed, so RLS rejects the profile insert.)
+ */
 export async function signUp(_prev: SignupState, form: FormData): Promise<SignupState> {
   const parsed = SignupSchema.safeParse({
     ...Object.fromEntries(form),
@@ -28,11 +32,19 @@ export async function signUp(_prev: SignupState, form: FormData): Promise<Signup
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid form" };
   const f = parsed.data;
 
-  const supabase = await createUserClient();
-  const { data, error } = await supabase.auth.signUp({ email: f.email, password: f.password });
-  if (error || !data.user) return { error: error?.message ?? "Sign up failed" };
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.createUser({
+    email: f.email,
+    password: f.password,
+    email_confirm: true,
+    user_metadata: { full_name: f.fullName },
+  });
+  if (error || !data.user) {
+    const taken = error?.message.toLowerCase().includes("already");
+    return { error: taken ? "An account with that email already exists. Sign in instead." : error?.message ?? "Sign up failed" };
+  }
 
-  const { error: profileError } = await supabase.from("profiles").insert({
+  const { error: profileError } = await admin.from("profiles").insert({
     id: data.user.id,
     full_name: f.fullName,
     email: f.email,
@@ -45,7 +57,14 @@ export async function signUp(_prev: SignupState, form: FormData): Promise<Signup
     postal_code: f.postalCode,
     sms_opt_in: f.smsOptIn,
   });
-  if (profileError) return { error: profileError.message };
+  if (profileError) {
+    await admin.auth.admin.deleteUser(data.user.id); // don't leave a login with no profile
+    return { error: profileError.message };
+  }
+
+  const supabase = await createUserClient();
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email: f.email, password: f.password });
+  if (signInError) return { error: signInError.message };
 
   redirect("/account");
 }
