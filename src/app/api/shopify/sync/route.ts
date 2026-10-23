@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
+import { isRentalOnly } from "@/lib/catalog-format";
 import { env } from "@/lib/env";
 import { fetchAllPieces } from "@/lib/shopify/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 
-const RENTAL_ONLY = /rental\s*only/i;
-
 /**
  * Mirror Shopify products into `pieces`. Leaves rental fields (is_rentable, daily_rate_cents) untouched,
- * except titles marked "rental only", which are always rentable.
+ * except rental-only listings (title marker or placeholder price), which are always rentable.
  */
 export async function POST(request: Request) {
   if (request.headers.get("authorization") !== `Bearer ${env("CRON_SECRET")}`) {
@@ -31,7 +30,7 @@ export async function POST(request: Request) {
     );
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const rentalOnly = pieces.filter((p) => RENTAL_ONLY.test(p.title)).map((p) => p.productId);
+  const rentalOnly = pieces.filter((p) => isRentalOnly(p.title, p.priceCents)).map((p) => p.productId);
   if (rentalOnly.length) {
     const { error: flagError } = await createAdminClient()
       .from("pieces")

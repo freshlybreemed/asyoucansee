@@ -27,12 +27,17 @@ async function accessToken(): Promise<string> {
   return json.access_token;
 }
 
-export async function shopifyAdmin<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
+/** Pass `revalidate` (seconds) for cacheable storefront reads; omit for uncached writes and syncs. */
+export async function shopifyAdmin<T>(
+  query: string,
+  variables: Record<string, unknown> = {},
+  opts: { revalidate?: number } = {},
+): Promise<T> {
   const res = await fetch(`https://${env("SHOPIFY_STORE_DOMAIN")}/admin/api/${API_VERSION}/graphql.json`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": await accessToken() },
     body: JSON.stringify({ query, variables }),
-    cache: "no-store",
+    ...(opts.revalidate ? { next: { revalidate: opts.revalidate } } : { cache: "no-store" as const }),
   });
   if (!res.ok) throw new Error(`Shopify ${res.status}: ${await res.text()}`);
   const json = (await res.json()) as { data: T; errors?: { message: string }[] };
