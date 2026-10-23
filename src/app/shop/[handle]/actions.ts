@@ -1,5 +1,6 @@
 "use server";
 
+import { stripeEnabled } from "@/lib/admin";
 import { todayInShowroom } from "@/lib/dates";
 import { quoteRental, type Quote, type RelationshipTier } from "@/lib/pricing";
 import { createAdminClient, createUserClient } from "@/lib/supabase/server";
@@ -59,7 +60,8 @@ export async function requestRental(
 ): Promise<{ ok?: true; error?: string }> {
   const { piece, profile } = await loadPieceAndTier(shopifyProductId);
   if (!profile) return { error: "Sign in to rent." };
-  if (!profile.has_card_on_file) return { error: "Add a card on your account page before renting." };
+  // Card on file is required once Stripe is live; until then payment is collected at pickup.
+  if (stripeEnabled() && !profile.has_card_on_file) return { error: "Add a card on your account page before renting." };
   if (!piece?.is_rentable) return { error: "This piece isn't available to rent." };
 
   const { quote, error } = quoteFor(piece, profile.tier as RelationshipTier, startsOn, dueOn);
