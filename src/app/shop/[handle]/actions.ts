@@ -1,6 +1,7 @@
 "use server";
 
 import { stripeEnabled } from "@/lib/admin";
+import { notifyStaff } from "@/lib/notify";
 import { todayInShowroom } from "@/lib/dates";
 import { quoteRental, type Quote, type RelationshipTier } from "@/lib/pricing";
 import { createAdminClient, createUserClient } from "@/lib/supabase/server";
@@ -11,13 +12,13 @@ async function loadPieceAndTier(shopifyProductId: string) {
   const db = createAdminClient();
   const { data: piece } = await db
     .from("pieces")
-    .select("id, retail_price_cents, daily_rate_cents, is_rentable")
+    .select("id, title, retail_price_cents, daily_rate_cents, is_rentable")
     .eq("shopify_product_id", shopifyProductId)
     .single();
   const supabase = await createUserClient();
   const { data: auth } = await supabase.auth.getUser();
   const { data: profile } = auth.user
-    ? await supabase.from("profiles").select("id, tier, has_card_on_file").eq("id", auth.user.id).single()
+    ? await supabase.from("profiles").select("id, full_name, tier, has_card_on_file").eq("id", auth.user.id).single()
     : { data: null };
   return { piece, profile };
 }
@@ -76,5 +77,9 @@ export async function requestRental(
     quote_breakdown: quote,
   });
   if (insertError) return { error: insertError.message };
+  await notifyStaff(
+    `Rental request: ${piece.title}`,
+    `${profile.full_name} (${profile.tier}) wants ${piece.title} from ${startsOn} to ${dueOn}. Quote: $${(quote.totalCents / 100).toFixed(2)}.`,
+  );
   return { ok: true };
 }

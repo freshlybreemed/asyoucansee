@@ -29,3 +29,16 @@ export async function notify(to: Recipient, subject: string, body: string) {
   }
   return errors;
 }
+
+/** Alert the team (ADMIN_NOTIFY_EMAILS, comma-separated) about something to review. Never throws. */
+export async function notifyStaff(subject: string, body: string, adminPath = "/admin") {
+  const to = (process.env.ADMIN_NOTIFY_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+  if (!to.length || !process.env.RESEND_API_KEY) return;
+  const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const link = `${host ? `https://${host}` : "http://localhost:3100"}${adminPath}`;
+  try {
+    await new Resend(env("RESEND_API_KEY")).emails.send({ from: env("NOTIFY_FROM_EMAIL"), to, subject, text: `${body}\n\n${link}` });
+  } catch (e) {
+    console.error("notifyStaff failed", e);
+  }
+}

@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { notifyStaff } from "@/lib/notify";
 import { isPhotoPath, MAX_PHOTOS, PHOTO_BUCKET, photoExtension } from "@/lib/consignment-photos";
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -58,5 +59,10 @@ export async function submitConsignment(_prev: ConsignState, form: FormData): Pr
     photo_paths: photoPaths,
   });
   if (error) return { error: "Something went wrong. Try again or DM us." };
+  await notifyStaff(
+    `Consignment: ${f.fullName}`,
+    `${f.fullName} (${[f.email, f.socialHandle].filter(Boolean).join(", ")}) wants to consign ${f.designers}. ${photoPaths.length} photo(s).\n\n${f.items}`,
+    "/admin/consignments",
+  );
   return { ok: true };
 }
