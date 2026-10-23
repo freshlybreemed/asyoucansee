@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { FeaturedGrid } from "@/components/featured";
 import { ProductGrid } from "@/components/product-card";
 import { listDesigners } from "@/lib/catalog/designers";
+import { listFeatured } from "@/lib/catalog/featured";
 import { listProducts } from "@/lib/shopify/catalog";
 
 export const revalidate = 300;
@@ -8,7 +10,11 @@ export const revalidate = 300;
 const SIGNATURE = ["rickowens", "jeanpaulgaultier", "marni", "maisonmargiela", "chanel", "justcavalli"];
 
 export default async function Home() {
-  const [{ products }, designers] = await Promise.all([listProducts({ first: 12 }), listDesigners()]);
+  const [featured, { products: arrivals }, designers] = await Promise.all([
+    listFeatured(),
+    listProducts({ first: 8 }),
+    listDesigners(),
+  ]);
   const signature = SIGNATURE.flatMap((k) => designers.find((d) => d.key === k) ?? []);
 
   return (
@@ -16,12 +22,22 @@ export default async function Home() {
       <section className="space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold md:text-5xl">New arrivals</h1>
-            <p className="mt-2 text-neutral-600">Archive and runway pieces, authenticated and ready to buy or rent.</p>
+            <h1 className="text-3xl font-semibold md:text-5xl">The collection</h1>
+            <p className="mt-2 max-w-xl text-neutral-600">
+              Archive and runway pieces, authenticated by us. Buy it, rent it, or see it in the showroom.
+            </p>
           </div>
-          <Link href="/shop" className="bg-black px-6 py-3 text-xs uppercase tracking-widest text-white">Shop new arrivals</Link>
+          <Link href="/shop" className="bg-black px-6 py-3 text-xs uppercase tracking-widest text-white">Shop all</Link>
         </div>
-        <ProductGrid products={products} />
+        <FeaturedGrid products={featured.products} />
+      </section>
+
+      <section className="space-y-6">
+        <div className="flex items-end justify-between">
+          <h2 className="text-2xl font-semibold">New arrivals</h2>
+          <Link href="/shop" className="text-xs uppercase tracking-widest underline">Shop new arrivals</Link>
+        </div>
+        <ProductGrid products={arrivals} />
       </section>
 
       <section className="space-y-6">

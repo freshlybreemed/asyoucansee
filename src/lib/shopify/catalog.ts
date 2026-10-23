@@ -57,6 +57,8 @@ function quote(value: string): string {
 
 export const SEARCH = {
   available: "status:active AND inventory_total:>0",
+  /** Hand-picked in Shopify with the `featured` tag. */
+  featured: "status:active AND inventory_total:>0 AND tag:featured",
   sold: "(status:archived) OR (status:active AND inventory_total:<1)",
 };
 
