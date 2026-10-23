@@ -11,9 +11,23 @@ export const revalidate = 300;
 const SIGNATURE = ["rickowens", "jeanpaulgaultier", "marni", "maisonmargiela", "chanel", "justcavalli"];
 
 const ways = [
-  { title: "Buy", body: "Every piece is inspected and authenticated before it's listed.", href: "/shop", cta: "Shop the collection" },
-  { title: "Rent", body: "Wear the archive for an event or a shoot. Join free, pick your dates, pick up at the showroom.", href: "/rent", cta: "Rent a piece" },
-  { title: "Sell", body: "Consign your closet. We authenticate, photograph, price, and sell. You get paid.", href: "/sell", cta: "Start consigning" },
+  { title: "Buy", body: "Shop the curation from your phone, or book a private appointment at the showroom.", href: "/shop", cta: "Shop the collection" },
+  { title: "Rent", body: "Red carpets, music videos, the party, and the after party. Priced for your dates and your plans.", href: "/rent", cta: "Rent a piece" },
+  { title: "Sell", body: "Keep 80% of the sale. Drop off your pieces and we handle pricing and marketing while you get paid.", href: "/sell", cta: "Start consigning" },
+];
+
+// From the AYCS press kit.
+const reviews = [
+  "The best consignment store on the planet. The curation is crazy.",
+  "AYCS has been one of the sole pillars of my fashion game since 2019 and even sourced pieces that I had been searching the globe for.",
+  "I love purchasing through AYCS. Prices are reasonable, pieces are quality, and they've greatly allowed me to expand my closet and offer different looks to my clients.",
+  "I do have trouble finding pieces at luxury consignments in my size, but they always have something new for me.",
+];
+
+const editorial = [
+  { src: "/brand/editorial/platform.jpg", alt: "A model in a black strapless top and trousers on a subway platform" },
+  { src: "/brand/editorial/olive.jpg", alt: "A model in an olive cropped blazer over a printed mesh top" },
+  { src: "/brand/editorial/crosswalk.jpg", alt: "A model crossing the street in a black cutout blazer dress" },
 ];
 
 export default async function Home() {
@@ -34,7 +48,7 @@ export default async function Home() {
           <div className="space-y-8">
             <h1 className="display text-[19vw] md:text-[8.5vw] xl:text-[8.25rem]">As you can see.</h1>
             <p className="max-w-md text-lg text-paper/80">
-              Archive and runway pieces, authenticated by us. Buy them, rent them, or try them on in the showroom.
+              Archive and runway pieces for the discerning eye. Buy, rent, sell, or try them on in the showroom.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link href="/shop" className="btn-paper">Shop the collection</Link>
@@ -92,7 +106,7 @@ export default async function Home() {
         <div className="relative mx-auto flex aspect-[4/5] max-h-[85vh] max-w-7xl flex-col justify-end gap-6 px-4 py-12 sm:aspect-video md:aspect-[21/9] md:px-8 md:py-16">
           <h2 className="display max-w-2xl text-5xl md:text-7xl">Wear the archive.</h2>
           <p className="max-w-md text-lg text-paper/85">
-            Every piece in the collection can be rented. Join free, pick your dates, and pick it up at the showroom.
+            Every piece in the collection can be rented. Your favorite pieces at a fraction of the price.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link href="/rent" className="btn-paper">Rent a piece</Link>
@@ -118,6 +132,35 @@ export default async function Home() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="grid gap-10 md:grid-cols-[1fr_1.4fr] md:gap-16">
+        <div className="space-y-6 md:sticky md:top-28 md:self-start">
+          <h2 className="display text-5xl md:text-7xl">Most people look. Few people see.</h2>
+          <p className="max-w-sm text-lg text-smoke">
+            One sees clothing. Another sees history. One sees a price tag. Another understands provenance, construction,
+            and rarity.
+          </p>
+          <Link href="/about" className="link inline-block font-medium">What do you see?</Link>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:gap-5">
+          {editorial.map((img, i) => (
+            <div key={img.src} className={`relative overflow-hidden bg-plate ${i === 0 ? "col-span-2 aspect-[4/3]" : "aspect-[3/4]"}`}>
+              <Image src={img.src} alt={img.alt} fill sizes="(min-width: 768px) 35vw, 50vw" className="object-cover" />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-10">
+        <h2 className="display text-3xl md:text-4xl">From clients</h2>
+        <div className="grid gap-x-12 gap-y-10 md:grid-cols-2">
+          {reviews.map((r, i) => (
+            <blockquote key={r} className={`border-l-2 border-rose pl-5 ${i === 0 ? "wide text-2xl md:col-span-2 md:text-4xl" : "text-lg text-smoke"}`}>
+              {r}
+            </blockquote>
+          ))}
+        </div>
       </section>
 
       <section className="grid gap-10 md:grid-cols-3 md:gap-8">

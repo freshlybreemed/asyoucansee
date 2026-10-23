@@ -68,7 +68,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
 
         <ul className="space-y-1 border-t border-ink/15 pt-4 text-sm text-smoke">
           <li>Authenticated by As You Can See</li>
-          <li>Try it on in the showroom by appointment</li>
+          <li>Try it on at the showroom, open 24 hours</li>
         </ul>
       </div>
     </div>

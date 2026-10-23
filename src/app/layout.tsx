@@ -19,6 +19,7 @@ const nav = [
   { href: "/designers", label: "Designers" },
   { href: "/archive", label: "Sold archive" },
   { href: "/sell", label: "Sell with us" },
+  { href: "/about", label: "About" },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -46,9 +47,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="grid gap-10 md:grid-cols-[2fr_1fr_1fr]">
               <div className="space-y-3">
                 <Image src="/brand/monogram.png" alt="" width={56} height={56} className="mb-6" />
-                <p className="wide text-lg">Showroom by appointment</p>
+                <p className="wide text-lg">Seeing is different than looking.</p>
                 <p className="max-w-sm text-sm text-paper/70">
-                  Try pieces on, pick up rentals, or bring in your closet. Hours are Pacific time.
+                  The 24-hour showroom. Los Angeles and South Florida. Try pieces on, pick up rentals, or bring in your
+                  closet.
                 </p>
               </div>
               <ul className="space-y-2 text-sm">

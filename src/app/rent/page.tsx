@@ -29,8 +29,8 @@ export default async function RentPage({ searchParams }: { searchParams: Promise
         <div className="space-y-6">
           <h1 className="page-title">Rent the archive</h1>
           <p className="max-w-md text-lg text-smoke">
-            Every piece in the shop is available to rent. For the event, the shoot, the night out. Members only, and
-            membership is free.
+            Your favorite pieces at a fraction of the price. From red carpets and music videos to the party (and the
+            after party). Every piece in the shop can be rented, and membership is free.
           </p>
           <Link href="/signup" className="btn">
             Join free
