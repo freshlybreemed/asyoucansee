@@ -39,7 +39,7 @@ export default async function Home() {
       <section className="grid gap-px bg-neutral-200 md:grid-cols-3">
         {[
           { title: "Buy", body: "Every piece is inspected and authenticated before it's listed.", href: "/shop", cta: "Shop" },
-          { title: "Rent", body: "Wear the archive for an event or a shoot. Free membership, card on file, pick your dates.", href: "/signup", cta: "Become a member" },
+          { title: "Rent", body: "Wear the archive for an event or a shoot. Free membership, card on file, pick your dates.", href: "/rent", cta: "See what's rentable" },
           { title: "Sell", body: "Consign your closet. We authenticate, photograph, price and sell. You get paid.", href: "/sell", cta: "Start consigning" },
         ].map((c) => (
           <div key={c.title} className="space-y-3 bg-white p-8">

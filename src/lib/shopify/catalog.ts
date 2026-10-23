@@ -100,3 +100,14 @@ export async function getProduct(handle: string): Promise<CatalogProduct | null>
   );
   return data.productByIdentifier ? toProduct(data.productByIdentifier) : null;
 }
+
+/** Look up specific products (e.g. rentable pieces from Supabase), skipping any that no longer exist. */
+export async function getProductsByIds(ids: string[]): Promise<CatalogProduct[]> {
+  if (!ids.length) return [];
+  const data = await shopifyAdmin<{ nodes: (RawProduct | null)[] }>(
+    `query Many($ids: [ID!]!) { nodes(ids: $ids) { ... on Product { ${PRODUCT_FIELDS} } } }`,
+    { ids },
+    { revalidate: REVALIDATE },
+  );
+  return data.nodes.flatMap((p) => (p?.id ? toProduct(p) ?? [] : []));
+}
