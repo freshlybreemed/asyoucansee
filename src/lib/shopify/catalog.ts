@@ -1,3 +1,4 @@
+import { categorySearch, type CategoryKey } from "@/lib/catalog/categories";
 import { shopifyAdmin } from "./admin";
 
 /** Storefront reads, cached for a few minutes so the site stays fast and within Shopify rate limits. */
@@ -66,13 +67,25 @@ export interface ListOptions {
   scope?: keyof typeof SEARCH;
   /** All spellings of one designer, e.g. ["Marni", "MARNI"]. */
   vendors?: string[];
+  /** Free-text search over title, designer, type and tags. */
+  query?: string;
+  category?: CategoryKey;
   after?: string | null;
   first?: number;
 }
 
-export async function listProducts({ scope = "available", vendors, after = null, first = 24 }: ListOptions = {}) {
+/** Shopper's search box text as Shopify search terms: each word matches as a prefix, all must match. */
+export function textSearch(query: string): string | null {
+  const words = query.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean).slice(0, 6);
+  return words.length ? words.map((w) => `${w}*`).join(" ") : null;
+}
+
+export async function listProducts({ scope = "available", vendors, query, category, after = null, first = 24 }: ListOptions = {}) {
   let search = SEARCH[scope];
   if (vendors?.length) search = `(${search}) AND (${vendors.map((v) => `vendor:${quote(v)}`).join(" OR ")})`;
+  if (category) search = `(${search}) AND ${categorySearch(category)}`;
+  const text = query ? textSearch(query) : null;
+  if (text) search = `(${search}) AND ${text}`;
 
   const data = await shopifyAdmin<{
     products: { pageInfo: { hasNextPage: boolean; endCursor: string | null }; nodes: RawProduct[] };

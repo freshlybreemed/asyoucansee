@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { safeNext } from "@/lib/next-path";
 import { createUserClient } from "@/lib/supabase/server";
 
 export async function signIn(_prev: { error?: string }, form: FormData) {
@@ -10,7 +11,7 @@ export async function signIn(_prev: { error?: string }, form: FormData) {
     password: String(form.get("password") ?? ""),
   });
   if (error) return { error: error.message };
-  redirect("/account");
+  redirect(safeNext(form.get("next")));
 }
 
 export async function signOut() {

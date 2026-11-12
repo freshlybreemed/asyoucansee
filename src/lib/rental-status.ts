@@ -1,11 +1,12 @@
 /** Rental lifecycle: which admin actions are allowed from each status. */
 
-export type RentalStatus = "requested" | "confirmed" | "checked_out" | "returned" | "late" | "cancelled";
+export type RentalStatus = "requested" | "quoted" | "confirmed" | "checked_out" | "returned" | "late" | "cancelled";
 export type RentalAction = "confirm" | "decline" | "check_out" | "check_in" | "cancel";
 
 const TRANSITIONS: Record<RentalAction, { from: RentalStatus[]; to: RentalStatus }> = {
-  confirm: { from: ["requested"], to: "confirmed" },
-  decline: { from: ["requested"], to: "cancelled" },
+  // Members confirm by paying their quote; staff confirm directly when it's settled another way.
+  confirm: { from: ["quoted"], to: "confirmed" },
+  decline: { from: ["requested", "quoted"], to: "cancelled" },
   // Key order is button order in the admin: primary action before cancel.
   check_out: { from: ["confirmed"], to: "checked_out" },
   cancel: { from: ["confirmed"], to: "cancelled" },
@@ -23,6 +24,6 @@ export function allowedActions(current: RentalStatus): RentalAction[] {
 }
 
 /** Amount still owed: rental total plus late fees, minus what's been paid. */
-export function balanceCents(r: { quoted_cents: number; late_fee_cents: number; paid_cents: number; late_fees_paid_cents: number }) {
-  return Math.max(0, r.quoted_cents - r.paid_cents) + Math.max(0, r.late_fee_cents - r.late_fees_paid_cents);
+export function balanceCents(r: { quoted_cents: number | null; late_fee_cents: number; paid_cents: number; late_fees_paid_cents: number }) {
+  return Math.max(0, (r.quoted_cents ?? 0) - r.paid_cents) + Math.max(0, r.late_fee_cents - r.late_fees_paid_cents);
 }

@@ -1,85 +1,96 @@
 "use server";
 
-import { stripeEnabled } from "@/lib/admin";
-import { notifyStaff } from "@/lib/notify";
+import { z } from "zod";
+import { formatMoney } from "@/lib/catalog-format";
+import { rentalRequested, staffRentalRequest } from "@/lib/email/templates";
+import { notify, notifyStaff } from "@/lib/notify";
+import { rentalEmailData } from "@/lib/rentals";
 import { todayInShowroom } from "@/lib/dates";
-import { quoteRental, type Quote, type RelationshipTier } from "@/lib/pricing";
+import { daysBetween, quoteRental, type Quote, type RelationshipTier } from "@/lib/pricing";
 import { createAdminClient, createUserClient } from "@/lib/supabase/server";
 
-type QuoteResult = { quote?: Quote; error?: string };
+const RequestSchema = z.object({
+  startsOn: z.iso.date("Pick a pick-up date"),
+  dueOn: z.iso.date("Pick a return date"),
+  occasion: z.string().trim().max(1000).optional(),
+  budget: z.string().trim().optional(),
+});
 
-async function loadPieceAndTier(shopifyProductId: string) {
-  const db = createAdminClient();
-  const { data: piece } = await db
-    .from("pieces")
-    .select("id, title, retail_price_cents, daily_rate_cents, is_rentable")
-    .eq("shopify_product_id", shopifyProductId)
-    .single();
-  const supabase = await createUserClient();
-  const { data: auth } = await supabase.auth.getUser();
-  const { data: profile } = auth.user
-    ? await supabase.from("profiles").select("id, full_name, tier, has_card_on_file").eq("id", auth.user.id).single()
-    : { data: null };
-  return { piece, profile };
-}
+export type RentalRequest = z.input<typeof RequestSchema>;
 
-function quoteFor(
+/** Engine price for staff to start from. Null when the piece has no usable retail price or daily rate yet. */
+function suggestedQuote(
   piece: { retail_price_cents: number; daily_rate_cents: number | null },
   tier: RelationshipTier,
   startsOn: string,
   dueOn: string,
-): QuoteResult {
+): Quote | null {
   try {
-    return {
-      quote: quoteRental({
-        retailPriceCents: piece.retail_price_cents,
-        dailyRateOverrideCents: piece.daily_rate_cents,
-        startsOn,
-        dueOn,
-        tier,
-        bookedOn: todayInShowroom(),
-      }),
-    };
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    // Pieces with placeholder Shopify prices need a hand-set daily rate before they can be quoted.
-    if (message.includes("placeholder")) return { error: "This piece is priced on request. Reach out and we'll quote you." };
-    return { error: message };
+    return quoteRental({
+      retailPriceCents: piece.retail_price_cents,
+      dailyRateOverrideCents: piece.daily_rate_cents,
+      startsOn,
+      dueOn,
+      tier,
+      bookedOn: todayInShowroom(),
+    });
+  } catch {
+    return null;
   }
 }
 
-export async function getRentalQuote(shopifyProductId: string, startsOn: string, dueOn: string): Promise<QuoteResult> {
-  const { piece, profile } = await loadPieceAndTier(shopifyProductId);
-  if (!piece?.is_rentable) return { error: "This piece isn't available to rent." };
-  return quoteFor(piece, (profile?.tier ?? "public") as RelationshipTier, startsOn, dueOn);
-}
+/**
+ * Send a rental request. No price yet: staff review the dates, occasion, budget and relationship,
+ * work out a rate with the member, then set it in the admin for them to pay.
+ */
+export async function requestRental(shopifyProductId: string, input: RentalRequest): Promise<{ ok?: true; error?: string }> {
+  const parsed = RequestSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form" };
+  const f = parsed.data;
+  if (daysBetween(f.startsOn, f.dueOn) < 0) return { error: "Return date must be on or after pick-up" };
+  if (daysBetween(todayInShowroom(), f.startsOn) < 0) return { error: "Pick-up date is in the past" };
+  const budgetDollars = f.budget ? Number(f.budget.replace(/[$,\s]/g, "")) : null;
+  if (budgetDollars !== null && (!Number.isFinite(budgetDollars) || budgetDollars < 0)) return { error: "Budget must be a dollar amount" };
+  const budgetCents = budgetDollars === null ? null : Math.round(budgetDollars * 100);
 
-export async function requestRental(
-  shopifyProductId: string,
-  startsOn: string,
-  dueOn: string,
-): Promise<{ ok?: true; error?: string }> {
-  const { piece, profile } = await loadPieceAndTier(shopifyProductId);
+  const supabase = await createUserClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { error: "Sign in to rent." };
+  const { data: profile } = await supabase.from("profiles").select("id, full_name, email, phone, sms_opt_in, tier, address_line1").eq("id", auth.user.id).single();
   if (!profile) return { error: "Sign in to rent." };
-  // Card on file is required once Stripe is live; until then payment is collected at pickup.
-  if (stripeEnabled() && !profile.has_card_on_file) return { error: "Add a card on your account page before renting." };
+  if (!profile.address_line1) return { error: "Add your address on your account page before renting." };
+
+  const db = createAdminClient();
+  const { data: piece } = await db
+    .from("pieces")
+    .select("id, title, vendor, image_url, retail_price_cents, daily_rate_cents, is_rentable")
+    .eq("shopify_product_id", shopifyProductId)
+    .single();
   if (!piece?.is_rentable) return { error: "This piece isn't available to rent." };
 
-  const { quote, error } = quoteFor(piece, profile.tier as RelationshipTier, startsOn, dueOn);
-  if (!quote) return { error };
-
-  const { error: insertError } = await createAdminClient().from("rentals").insert({
+  const suggestion = suggestedQuote(piece, profile.tier as RelationshipTier, f.startsOn, f.dueOn);
+  const { data: rental, error: insertError } = await db.from("rentals").insert({
     profile_id: profile.id,
     piece_id: piece.id,
-    starts_on: startsOn,
-    due_on: dueOn,
-    quoted_cents: quote.totalCents,
-    quote_breakdown: quote,
-  });
-  if (insertError) return { error: insertError.message };
+    starts_on: f.startsOn,
+    due_on: f.dueOn,
+    occasion: f.occasion || null,
+    budget_cents: budgetCents,
+    quote_breakdown: suggestion,
+  })
+    .select("id, starts_on, due_on")
+    .single();
+  if (insertError || !rental) return { error: insertError?.message ?? "Couldn't save your request" };
+  const emailData = rentalEmailData({ ...rental, pieces: piece });
+  await notify({ email: profile.email, phone: profile.phone, smsOptIn: profile.sms_opt_in }, rentalRequested(emailData));
   await notifyStaff(
-    `Rental request: ${piece.title}`,
-    `${profile.full_name} (${profile.tier}) wants ${piece.title} from ${startsOn} to ${dueOn}. Quote: $${(quote.totalCents / 100).toFixed(2)}.`,
+    staffRentalRequest(emailData, {
+      name: profile.full_name,
+      tier: profile.tier,
+      occasion: f.occasion,
+      budgetCents,
+      suggestedCents: suggestion?.totalCents ?? null,
+    }),
   );
   return { ok: true };
 }

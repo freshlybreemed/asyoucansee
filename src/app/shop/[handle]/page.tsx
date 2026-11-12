@@ -1,10 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buyNowUrl, designerKey, displayTitle, formatMoney, isRentalOnly } from "@/lib/catalog-format";
 import { env } from "@/lib/env";
 import { getProduct } from "@/lib/shopify/catalog";
 import { createAdminClient, createUserClient } from "@/lib/supabase/server";
+import { Gallery } from "./gallery";
 import { RentForm } from "./rent-form";
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
@@ -28,13 +28,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
 
   return (
     <div className="grid gap-10 md:grid-cols-[3fr_2fr] md:gap-14">
-      <div className="grid gap-2 sm:grid-cols-2">
-        {product.images.map((img, i) => (
-          <div key={img.url} className={`plate aspect-[4/5] ${i === 0 ? "sm:col-span-2 sm:aspect-square" : ""}`}>
-            <Image src={img.url} alt={img.altText ?? product.title} fill priority={i === 0} sizes="(min-width: 768px) 60vw, 100vw" className="object-contain p-[6%]" />
-          </div>
-        ))}
-      </div>
+      <Gallery images={product.images} title={product.title} />
 
       <div className="space-y-6 md:sticky md:top-24 md:self-start">
         <div className="space-y-3">
@@ -60,7 +54,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
           )
         )}
 
-        {rentable && <RentForm productId={product.id} signedIn={!!auth.user} />}
+        {rentable && <RentForm productId={product.id} signedIn={!!auth.user} path={`/shop/${product.handle}`} />}
 
         {product.descriptionHtml && (
           <div className="space-y-2 text-sm leading-relaxed text-smoke" dangerouslySetInnerHTML={{ __html: product.descriptionHtml }} />

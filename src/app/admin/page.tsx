@@ -1,12 +1,16 @@
 import { AdminError } from "@/components/admin-error";
+import Link from "next/link";
+import { SaveButton } from "@/components/save-button";
+import { CATEGORIES, isCategoryKey } from "@/lib/catalog/categories";
 import { stripeEnabled } from "@/lib/admin";
 import { displayTitle, formatMoney } from "@/lib/catalog-format";
 import { createAdminClient } from "@/lib/supabase/server";
 import { allowedActions, balanceCents, type RentalAction, type RentalStatus } from "@/lib/rental-status";
-import { markPaid, rentalAction } from "./actions";
+import { markPaid, rentalAction, setQuote } from "./actions";
 
 const COLUMNS: { status: RentalStatus; label: string }[] = [
-  { status: "requested", label: "Requests" },
+  { status: "requested", label: "Requests: reach out and set a price" },
+  { status: "quoted", label: "Quoted: waiting on payment" },
   { status: "confirmed", label: "Confirmed: awaiting pickup" },
   { status: "checked_out", label: "Out now" },
   { status: "late", label: "Late" },
@@ -26,31 +30,68 @@ type Row = {
   status: RentalStatus;
   starts_on: string;
   due_on: string;
-  quoted_cents: number;
+  quoted_cents: number | null;
+  occasion: string | null;
+  budget_cents: number | null;
+  quote_breakdown: { totalCents: number } | null;
   paid_cents: number;
   late_fee_cents: number;
   late_fees_paid_cents: number;
   payment_method: string | null;
-  pieces: { title: string; vendor: string | null; image_url: string | null } | null;
+  pieces: { title: string; vendor: string | null; image_url: string | null; category: string | null } | null;
   profiles: { full_name: string; email: string; phone: string | null; social_handle: string | null; tier: string } | null;
 };
 
-export default async function AdminRentals({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const { error } = await searchParams;
+type Filters = { q?: string; designer?: string; category?: string; status?: string; error?: string };
+
+export default async function AdminRentals({ searchParams }: { searchParams: Promise<Filters> }) {
+  const { error, q = "", designer = "", category = "", status = "" } = await searchParams;
   const { data, error: loadError } = await createAdminClient()
     .from("rentals")
     .select(
-      "id, status, starts_on, due_on, quoted_cents, paid_cents, late_fee_cents, late_fees_paid_cents, payment_method, " +
-        "pieces(title, vendor, image_url), profiles(full_name, email, phone, social_handle, tier)",
+      "id, status, starts_on, due_on, quoted_cents, occasion, budget_cents, quote_breakdown, paid_cents, late_fee_cents, late_fees_paid_cents, payment_method, " +
+        "pieces(title, vendor, image_url, category), profiles(full_name, email, phone, social_handle, tier)",
     )
     .neq("status", "cancelled")
     .order("starts_on");
   if (loadError) throw new Error(loadError.message);
-  const rows = (data ?? []) as unknown as Row[];
+  const all = (data ?? []) as unknown as Row[];
+  const designers = [...new Set(all.map((r) => r.pieces?.vendor).filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b));
+  const needle = q.trim().toLowerCase();
+  const rows = all.filter(
+    (r) =>
+      (!designer || r.pieces?.vendor === designer) &&
+      (!isCategoryKey(category) || r.pieces?.category === category) &&
+      (!needle || [r.profiles?.full_name, r.profiles?.email, r.pieces?.title].some((v) => v?.toLowerCase().includes(needle))),
+  );
+  const filtering = Boolean(q || designer || category || status);
 
   return (
     <div className="space-y-8">
       <AdminError error={error} />
+      <form className="flex flex-wrap gap-2">
+        <input name="q" defaultValue={q} placeholder="Member or piece" className="min-w-0 flex-1 border px-3 py-2 text-sm" />
+        <select name="designer" defaultValue={designer} aria-label="Designer" className="border px-2 py-2 text-sm">
+          <option value="">All designers</option>
+          {designers.map((d) => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
+        <select name="category" defaultValue={category} aria-label="Category" className="border px-2 py-2 text-sm">
+          <option value="">All categories</option>
+          {CATEGORIES.map((c) => (
+            <option key={c.key} value={c.key}>{c.label}</option>
+          ))}
+        </select>
+        <select name="status" defaultValue={status} aria-label="Status" className="border px-2 py-2 text-sm">
+          <option value="">All statuses</option>
+          {COLUMNS.map((c) => (
+            <option key={c.status} value={c.status}>{c.label.split(":")[0]}</option>
+          ))}
+        </select>
+        <button className="bg-black px-4 py-2 text-xs uppercase tracking-widest text-white">Filter</button>
+        {filtering && <Link href="/admin" className="self-center text-sm underline">Clear</Link>}
+      </form>
       {!stripeEnabled() && (
         <p className="bg-neutral-100 p-3 text-sm">
           Stripe isn&apos;t connected, so collect payment in the showroom and use <strong>Mark paid</strong>. Late fees still
@@ -58,8 +99,9 @@ export default async function AdminRentals({ searchParams }: { searchParams: Pro
         </p>
       )}
       {COLUMNS.map((col) => {
+        if (status && col.status !== status) return null;
         const list = rows.filter((r) => r.status === col.status);
-        if (!list.length && col.status !== "requested") return null;
+        if (!list.length && (filtering || col.status !== "requested")) return null;
         return (
           <section key={col.status} className="space-y-3">
             <h2 className="text-xs uppercase tracking-widest text-neutral-500">
@@ -70,7 +112,7 @@ export default async function AdminRentals({ searchParams }: { searchParams: Pro
               {list.map((r) => {
                 const balance = balanceCents(r);
                 return (
-                  <li key={r.id} className="grid gap-3 p-4 md:grid-cols-[1fr_1fr_auto] md:items-center">
+                  <li key={r.id} id={`rental-${r.id}`} className="scroll-mt-24 grid gap-3 p-4 target:bg-rose/20 md:grid-cols-[1fr_1fr_auto] md:items-center">
                     <div className="flex items-center gap-3">
                       {r.pieces?.image_url && (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -89,16 +131,39 @@ export default async function AdminRentals({ searchParams }: { searchParams: Pro
                         {[r.profiles?.phone, r.profiles?.social_handle, r.profiles?.email].filter(Boolean).join(" · ")}
                       </p>
                       <p>
-                        {r.starts_on} → {r.due_on} · {formatMoney(r.quoted_cents)}
+                        {r.starts_on} → {r.due_on}
+                        {r.quoted_cents != null && <> · {formatMoney(r.quoted_cents)}</>}
                         {r.late_fee_cents > 0 && <span className="text-red-600"> + {formatMoney(r.late_fee_cents)} late</span>}
-                        {balance > 0 ? (
+                        {r.quoted_cents == null ? null : balance > 0 ? (
                           <span className="text-amber-700"> · owes {formatMoney(balance)}</span>
                         ) : (
                           <span className="text-green-700"> · paid{r.payment_method ? ` (${r.payment_method.replace("_", " ")})` : ""}</span>
                         )}
                       </p>
+                      {(r.status === "requested" || r.status === "quoted") && (
+                        <p className="text-neutral-500">
+                          {r.occasion && <>For: {r.occasion} · </>}
+                          Budget {r.budget_cents != null ? formatMoney(r.budget_cents) : "not given"} · Suggested{" "}
+                          {r.quote_breakdown ? formatMoney(r.quote_breakdown.totalCents) : "n/a"}
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      {(r.status === "requested" || r.status === "quoted") && (
+                        <form key={r.quoted_cents ?? "new"} action={setQuote.bind(null, r.id)} className="flex gap-2">
+                          <input
+                            name="quote"
+                            inputMode="decimal"
+                            required
+                            placeholder="$"
+                            defaultValue={r.quoted_cents != null ? r.quoted_cents / 100 : (r.quote_breakdown?.totalCents ?? 0) / 100 || ""}
+                            className="w-24 border px-2 py-2 text-sm"
+                          />
+                          <SaveButton className="bg-black px-3 py-2 text-xs uppercase tracking-widest text-white">
+                            {r.status === "quoted" ? "Update quote" : "Send quote"}
+                          </SaveButton>
+                        </form>
+                      )}
                       {allowedActions(r.status).map((a) => (
                         <form key={a} action={rentalAction.bind(null, r.id, a)}>
                           <button

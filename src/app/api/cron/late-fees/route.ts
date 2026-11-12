@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { todayInShowroom } from "@/lib/dates";
 import { env } from "@/lib/env";
 import { computeLateFee } from "@/lib/late-fees";
+import { rentalOverdue } from "@/lib/email/templates";
 import { notify } from "@/lib/notify";
+import { alreadyNotified, logNotification } from "@/lib/reminders";
 import { chargeSavedCard } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -16,7 +18,7 @@ export async function GET(request: Request) {
 
   const { data: overdue, error } = await db
     .from("rentals")
-    .select("id, due_on, late_fee_cents, late_fee_charged_through, pieces(title), profiles(email, phone, sms_opt_in, stripe_customer_id)")
+    .select("id, profile_id, starts_on, due_on, late_fee_cents, late_fee_charged_through, pieces(title, vendor, image_url), profiles(email, phone, sms_opt_in, stripe_customer_id)")
     .in("status", ["checked_out", "late"])
     .lt("due_on", today);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -52,11 +54,21 @@ export async function GET(request: Request) {
       })
       .eq("id", r.id);
 
-    const notifyErrors = await notify(
-      { email: profile.email, phone: profile.phone, smsOptIn: profile.sms_opt_in },
-      "As You Can See: rental overdue",
-      `${piece?.title} was due ${r.due_on}. It's ${fee.daysLate} day(s) late; $30/day is charged to your card on file until it's returned.`,
-    );
+    // One overdue email per day late; the log keeps a re-run from sending it twice.
+    const kind = `overdue:${today}`;
+    let notifyErrors: { channel: "email" | "sms"; error: string }[] = [];
+    if (!(await alreadyNotified(db, r.id, kind))) {
+      notifyErrors = await notify(
+        { email: profile.email, phone: profile.phone, smsOptIn: profile.sms_opt_in },
+        rentalOverdue(
+          { id: r.id, startsOn: r.starts_on, dueOn: r.due_on, piece: piece ? { title: piece.title, vendor: piece.vendor, imageUrl: piece.image_url } : null },
+          fee.daysLate,
+          r.late_fee_cents + fee.newFeeCents,
+          chargeError !== null,
+        ),
+      );
+      await logNotification(db, { rentalId: r.id, profileId: r.profile_id, kind, sms: Boolean(profile.sms_opt_in && profile.phone), errors: notifyErrors });
+    }
     results.push({ rentalId: r.id, charged: fee.newFeeCents, chargeError, notifyErrors });
   }
   return NextResponse.json({ today, processed: results.length, results });

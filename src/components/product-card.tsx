@@ -60,12 +60,13 @@ export function ProductGrid({ products, sold }: { products: CatalogProduct[]; so
   );
 }
 
-/** "Next page" link that carries the Shopify cursor; back uses the browser. */
-export function NextPage({ cursor, basePath }: { cursor: string | null; basePath: string }) {
+/** "Next page" link that carries the Shopify cursor (and any active filters); back uses the browser. */
+export function NextPage({ cursor, basePath, params = {} }: { cursor: string | null; basePath: string; params?: Record<string, string | undefined> }) {
   if (!cursor) return null;
+  const qs = new URLSearchParams(Object.entries({ ...params, after: cursor }).filter((e): e is [string, string] => !!e[1]));
   return (
     <div className="mt-14 text-center">
-      <Link href={`${basePath}?after=${encodeURIComponent(cursor)}`} className="btn-line">
+      <Link href={`${basePath}?${qs}`} className="btn-line">
         More pieces
       </Link>
     </div>

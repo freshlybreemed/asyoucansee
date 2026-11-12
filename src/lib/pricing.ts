@@ -39,7 +39,7 @@ export interface QuoteInput {
   retailPriceCents: number;
   dailyRateOverrideCents?: number | null;
   startsOn: string; // YYYY-MM-DD
-  dueOn: string; // YYYY-MM-DD, inclusive
+  dueOn: string; // YYYY-MM-DD, return date
   tier: RelationshipTier;
   bookedOn: string; // YYYY-MM-DD
   config?: typeof PRICING;
@@ -86,8 +86,10 @@ function dayFactor(day: number, cfg: typeof PRICING): number {
 
 export function quoteRental(input: QuoteInput): Quote {
   const cfg = input.config ?? PRICING;
-  const days = daysBetween(input.startsOn, input.dueOn) + 1;
-  if (days < 1) throw new Error("Due date must be on or after start date");
+  const span = daysBetween(input.startsOn, input.dueOn);
+  if (span < 0) throw new Error("Due date must be on or after start date");
+  // Count nights, like a hotel: pick up Monday, return Tuesday is one day. Same-day returns are one day too.
+  const days = Math.max(1, span);
   const notice = daysBetween(input.bookedOn, input.startsOn);
   if (notice < 0) throw new Error("Start date is in the past");
 

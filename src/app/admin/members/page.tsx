@@ -1,4 +1,5 @@
 import { AdminError } from "@/components/admin-error";
+import { SaveButton } from "@/components/save-button";
 import { PRICING } from "@/lib/pricing";
 import { createAdminClient } from "@/lib/supabase/server";
 import { setTier } from "../actions";
@@ -31,12 +32,13 @@ export default async function AdminMembers({ searchParams }: { searchParams: Pro
               </p>
             </div>
             <form action={setTier.bind(null, m.id)} className="flex gap-2">
-              <select name="tier" defaultValue={m.tier} className="border px-2 py-1.5">
+              {/* Keyed on the saved tier: React resets forms to their initial values after an action, which made saves look like they failed. */}
+              <select key={m.tier} name="tier" defaultValue={m.tier} className="border px-2 py-1.5">
                 {Object.keys(PRICING.relationship).map((t) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
-              <button className="border px-3 py-1.5 text-xs uppercase">Save</button>
+              <SaveButton className="w-24 border px-3 py-1.5 text-xs uppercase" />
             </form>
           </li>
         ))}

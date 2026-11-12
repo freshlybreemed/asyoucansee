@@ -2,36 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAdmin, stripeEnabled } from "@/lib/admin";
+import { requireAdmin } from "@/lib/admin";
 import { todayInShowroom } from "@/lib/dates";
+import { formatMoney } from "@/lib/catalog-format";
 import { computeLateFee } from "@/lib/late-fees";
+import * as emails from "@/lib/email/templates";
+import type { EmailContent } from "@/lib/email/layout";
 import { notify } from "@/lib/notify";
 import type { RelationshipTier } from "@/lib/pricing";
-import { nextStatus, type RentalAction, type RentalStatus } from "@/lib/rental-status";
+import { nextStatus, type RentalAction } from "@/lib/rental-status";
+import { chargeAndHold, RENTAL_SELECT, rentalEmailData, type RentalRow } from "@/lib/rentals";
 import { adjustAvailable } from "@/lib/shopify/admin";
-import { chargeSavedCard } from "@/lib/stripe";
 
 function fail(path: string, error: unknown): never {
   const message = error instanceof Error ? error.message : String(error);
   redirect(`${path}?error=${encodeURIComponent(message)}`);
 }
-
-const RENTAL_SELECT =
-  "id, status, starts_on, due_on, quoted_cents, paid_cents, late_fee_cents, late_fee_charged_through, " +
-  "pieces(title, vendor, shopify_inventory_item_id), profiles(full_name, email, phone, sms_opt_in, stripe_customer_id, has_card_on_file)";
-
-type RentalRow = {
-  id: string;
-  status: RentalStatus;
-  starts_on: string;
-  due_on: string;
-  quoted_cents: number;
-  paid_cents: number;
-  late_fee_cents: number;
-  late_fee_charged_through: string | null;
-  pieces: { title: string; vendor: string | null; shopify_inventory_item_id: string } | null;
-  profiles: { full_name: string; email: string; phone: string | null; sms_opt_in: boolean; stripe_customer_id: string | null; has_card_on_file: boolean } | null;
-};
 
 /** Move a rental through its lifecycle, syncing Shopify inventory and notifying the member. */
 export async function rentalAction(rentalId: string, action: RentalAction) {
@@ -44,27 +30,23 @@ export async function rentalAction(rentalId: string, action: RentalAction) {
     const piece = r.pieces;
     const member = r.profiles;
     const update: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
-    let message: [string, string] | null = null;
+    const emailData = rentalEmailData(r);
+    let message: EmailContent | null = null;
 
     if (action === "confirm") {
-      if (stripeEnabled() && member?.stripe_customer_id && member.has_card_on_file && r.quoted_cents > r.paid_cents) {
-        await chargeSavedCard(member.stripe_customer_id, r.quoted_cents - r.paid_cents, `Rental: ${piece?.title}`, `rental-${r.id}`);
-        Object.assign(update, { paid_cents: r.quoted_cents, paid_at: new Date().toISOString(), payment_method: "stripe" });
-      }
-      // Hold the piece off Shopify from confirmation so nobody buys it before pickup.
-      if (piece) await adjustAvailable(piece.shopify_inventory_item_id, -1, "rental_hold");
-      message = ["Rental confirmed", `${piece?.title} is yours ${r.starts_on} to ${r.due_on}. See you at the showroom.`];
+      Object.assign(update, await chargeAndHold(db, r));
+      message = emails.rentalConfirmed(emailData, (update.paid_cents as number | undefined) ?? (r.paid_cents || undefined));
     }
     if (action === "decline") {
-      message = ["Rental request update", `${piece?.title} isn't available for ${r.starts_on} to ${r.due_on}. Reply and we'll find you something.`];
+      message = emails.rentalDeclined(emailData);
     }
     if (action === "cancel") {
       if (piece) await adjustAvailable(piece.shopify_inventory_item_id, 1, "rental_return");
-      message = ["Rental cancelled", `Your booking for ${piece?.title} (${r.starts_on} to ${r.due_on}) is cancelled.`];
+      message = emails.rentalCancelled(emailData);
     }
     if (action === "check_out") {
       update.checked_out_at = new Date().toISOString();
-      message = ["Enjoy the piece", `${piece?.title} is due back ${r.due_on}. Late returns are $30/day.`];
+      message = emails.rentalCheckedOut(emailData);
     }
     if (action === "check_in") {
       const fee = computeLateFee({ dueOn: r.due_on, today: todayInShowroom(), chargedThrough: r.late_fee_charged_through });
@@ -74,16 +56,46 @@ export async function rentalAction(rentalId: string, action: RentalAction) {
       }
       if (piece) await adjustAvailable(piece.shopify_inventory_item_id, 1, "rental_return");
       update.returned_at = new Date().toISOString();
-      message = ["Returned. Thank you", `We've got ${piece?.title} back. Come see what's new.`];
+      message = emails.rentalReturned(emailData, (update.late_fee_cents as number | undefined) ?? r.late_fee_cents);
     }
 
     const { error: updateError } = await db.from("rentals").update(update).eq("id", r.id);
     if (updateError) {
       throw new Error(updateError.message.includes("rentals_no_overlap") ? "Those dates overlap another booking for this piece." : updateError.message);
     }
-    if (member && message) await notify({ email: member.email, phone: member.phone, smsOptIn: member.sms_opt_in }, ...message);
+    if (member && message) await notify({ email: member.email, phone: member.phone, smsOptIn: member.sms_opt_in }, message);
   } catch (e) {
     fail("/admin", e);
+  }
+  revalidatePath("/admin");
+}
+
+/** Set (or revise) the price staff agreed with the member, and send it to them to pay. */
+export async function setQuote(rentalId: string, form: FormData) {
+  const { db } = await requireAdmin();
+  const dollars = Number(String(form.get("quote") ?? "").trim());
+  if (!Number.isFinite(dollars) || dollars < 0) fail("/admin", "Quote must be a dollar amount");
+  const cents = Math.round(dollars * 100);
+  const { data, error } = await db
+    .from("rentals")
+    .update({ quoted_cents: cents, quoted_at: new Date().toISOString(), status: "quoted", updated_at: new Date().toISOString() })
+    .eq("id", rentalId)
+    .in("status", ["requested", "quoted"])
+    .select("id, starts_on, due_on, pieces(title, vendor, image_url), profiles(email, phone, sms_opt_in)")
+    .single();
+  if (error || !data) fail("/admin", error?.message ?? "Only open requests can be quoted");
+  const r = data as unknown as {
+    id: string;
+    starts_on: string;
+    due_on: string;
+    pieces: { title: string; vendor: string | null; image_url: string | null } | null;
+    profiles: { email: string; phone: string | null; sms_opt_in: boolean } | null;
+  };
+  if (r.profiles) {
+    await notify(
+      { email: r.profiles.email, phone: r.profiles.phone, smsOptIn: r.profiles.sms_opt_in },
+      emails.rentalQuoted(rentalEmailData(r), cents),
+    );
   }
   revalidatePath("/admin");
 }
@@ -96,7 +108,7 @@ export async function markPaid(rentalId: string, method: "in_person" | "comp") {
   const { error: updateError } = await db
     .from("rentals")
     .update({
-      paid_cents: r.quoted_cents,
+      paid_cents: r.quoted_cents ?? 0,
       late_fees_paid_cents: r.late_fee_cents,
       paid_at: new Date().toISOString(),
       payment_method: method,

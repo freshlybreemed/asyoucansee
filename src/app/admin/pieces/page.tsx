@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { AdminError } from "@/components/admin-error";
+import { SaveButton } from "@/components/save-button";
+import { CATEGORIES, isCategoryKey } from "@/lib/catalog/categories";
+import { listDesigners } from "@/lib/catalog/designers";
 import { displayTitle, formatMoney, isRentalOnly } from "@/lib/catalog-format";
 import { dailyRateCents } from "@/lib/pricing";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -10,9 +13,11 @@ const PAGE = 50;
 export default async function AdminPieces({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; rentable?: string; page?: string; error?: string }>;
+  searchParams: Promise<{ q?: string; rentable?: string; designer?: string; category?: string; page?: string; error?: string }>;
 }) {
-  const { q = "", rentable, page = "0", error } = await searchParams;
+  const { q = "", rentable, designer: designerKey = "", category = "", page = "0", error } = await searchParams;
+  const designers = await listDesigners();
+  const designer = designers.find((d) => d.key === designerKey);
   const from = Number(page) * PAGE;
   let query = createAdminClient()
     .from("pieces")
@@ -22,20 +27,41 @@ export default async function AdminPieces({
     .range(from, from + PAGE - 1);
   if (q) query = query.or(`title.ilike.%${q.replace(/[%,()]/g, "")}%,vendor.ilike.%${q.replace(/[%,()]/g, "")}%`);
   if (rentable === "1") query = query.eq("is_rentable", true);
+  if (rentable === "0") query = query.eq("is_rentable", false);
+  if (designer) query = query.in("vendor", designer.spellings);
+  if (isCategoryKey(category)) query = query.eq("category", category);
+  if (category === "none") query = query.is("category", null);
   const { data, count, error: loadError } = await query;
   if (loadError) throw new Error(loadError.message);
 
-  const qs = (p: number) => `?${new URLSearchParams({ q, ...(rentable ? { rentable } : {}), page: String(p) })}`;
+  const filters = Object.fromEntries(Object.entries({ q, rentable, designer: designerKey, category }).filter(([, v]) => v)) as Record<string, string>;
+  const qs = (p: number) => `?${new URLSearchParams({ ...filters, page: String(p) })}`;
 
   return (
     <div className="space-y-6">
       <AdminError error={error} />
       <form className="flex flex-wrap gap-2">
         <input name="q" defaultValue={q} placeholder="Search title or designer" className="min-w-0 flex-1 border px-3 py-2 text-sm" />
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="rentable" value="1" defaultChecked={rentable === "1"} /> Rentable only
-        </label>
-        <button className="bg-black px-4 py-2 text-xs uppercase tracking-widest text-white">Search</button>
+        <select name="designer" defaultValue={designerKey} aria-label="Designer" className="border px-2 py-2 text-sm">
+          <option value="">All designers</option>
+          {[...designers].sort((a, b) => a.name.localeCompare(b.name)).map((d) => (
+            <option key={d.key} value={d.key}>{d.name}</option>
+          ))}
+        </select>
+        <select name="category" defaultValue={category} aria-label="Category" className="border px-2 py-2 text-sm">
+          <option value="">All categories</option>
+          {CATEGORIES.map((c) => (
+            <option key={c.key} value={c.key}>{c.label}</option>
+          ))}
+          <option value="none">Uncategorized</option>
+        </select>
+        <select name="rentable" defaultValue={rentable ?? ""} aria-label="Rentable" className="border px-2 py-2 text-sm">
+          <option value="">Rentable or not</option>
+          <option value="1">Rentable</option>
+          <option value="0">Not rentable</option>
+        </select>
+        <button className="bg-black px-4 py-2 text-xs uppercase tracking-widest text-white">Filter</button>
+        {Object.keys(filters).length > 0 && <Link href="/admin/pieces" className="self-center text-sm underline">Clear</Link>}
       </form>
       <p className="text-sm text-neutral-500">
         {count ?? 0} pieces. Leave the daily rate blank to use 8% of retail.
@@ -66,13 +92,14 @@ export default async function AdminPieces({
               <form action={setDailyRate.bind(null, p.id)} className="flex items-center gap-2 text-sm">
                 <span className="text-neutral-500">$/day</span>
                 <input
+                  key={p.daily_rate_cents ?? "derived"}
                   name="dailyRate"
                   inputMode="decimal"
                   defaultValue={p.daily_rate_cents != null ? p.daily_rate_cents / 100 : ""}
                   placeholder={derived}
                   className="w-28 border px-2 py-1.5"
                 />
-                <button className="border px-2 py-1.5 text-xs uppercase">Save</button>
+                <SaveButton className="w-20 border px-2 py-1.5 text-xs uppercase" />
               </form>
               <form action={setRentable.bind(null, p.id, !p.is_rentable)}>
                 <button

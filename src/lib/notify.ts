@@ -1,6 +1,9 @@
-import { Resend } from "resend";
 import twilio from "twilio";
+import type { EmailContent } from "@/lib/email/layout";
 import { env } from "@/lib/env";
+import { mailgunConfigured, sendEmail } from "@/lib/mailgun";
+
+export { siteUrl } from "@/lib/site-url";
 
 export interface Recipient {
   email: string;
@@ -9,10 +12,10 @@ export interface Recipient {
 }
 
 /** Email always; SMS only when the member opted in and gave a number. Returns per-channel errors. */
-export async function notify(to: Recipient, subject: string, body: string) {
+export async function notify(to: Recipient, email: EmailContent) {
   const errors: { channel: "email" | "sms"; error: string }[] = [];
   try {
-    await new Resend(env("RESEND_API_KEY")).emails.send({ from: env("NOTIFY_FROM_EMAIL"), to: to.email, subject, text: body });
+    await sendEmail({ to: to.email, subject: email.subject, text: email.text, html: email.html });
   } catch (e) {
     errors.push({ channel: "email", error: String(e) });
   }
@@ -21,23 +24,22 @@ export async function notify(to: Recipient, subject: string, body: string) {
       await twilio(env("TWILIO_ACCOUNT_SID"), env("TWILIO_AUTH_TOKEN")).messages.create({
         from: env("TWILIO_FROM_NUMBER"),
         to: to.phone,
-        body: `${subject}: ${body}`,
+        body: email.sms,
       });
     } catch (e) {
       errors.push({ channel: "sms", error: String(e) });
     }
   }
+  if (errors.length) console.error("notify failed", errors);
   return errors;
 }
 
 /** Alert the team (ADMIN_NOTIFY_EMAILS, comma-separated) about something to review. Never throws. */
-export async function notifyStaff(subject: string, body: string, adminPath = "/admin") {
+export async function notifyStaff(email: EmailContent) {
   const to = (process.env.ADMIN_NOTIFY_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
-  if (!to.length || !process.env.RESEND_API_KEY) return;
-  const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  const link = `${host ? `https://${host}` : "http://localhost:3100"}${adminPath}`;
+  if (!to.length || !mailgunConfigured()) return;
   try {
-    await new Resend(env("RESEND_API_KEY")).emails.send({ from: env("NOTIFY_FROM_EMAIL"), to, subject, text: `${body}\n\n${link}` });
+    await sendEmail({ to, subject: email.subject, text: email.text, html: email.html });
   } catch (e) {
     console.error("notifyStaff failed", e);
   }

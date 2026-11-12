@@ -1,7 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { notifyStaff } from "@/lib/notify";
+import { consignmentReceived, staffConsignment } from "@/lib/email/templates";
+import { notify, notifyStaff } from "@/lib/notify";
 import { isPhotoPath, MAX_PHOTOS, PHOTO_BUCKET, photoExtension } from "@/lib/consignment-photos";
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -46,7 +47,7 @@ export async function submitConsignment(_prev: ConsignState, form: FormData): Pr
   const parsed = ConsignSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form" };
   const f = parsed.data;
-  const { error } = await createAdminClient().from("consignments").insert({
+  const { data: row, error } = await createAdminClient().from("consignments").insert({
     full_name: f.fullName,
     email: f.email,
     phone: f.phone || null,
@@ -57,12 +58,22 @@ export async function submitConsignment(_prev: ConsignState, form: FormData): Pr
     estimated_value: f.estimatedValue || null,
     photos_url: f.photosUrl || null,
     photo_paths: photoPaths,
-  });
-  if (error) return { error: "Something went wrong. Try again or DM us." };
+  })
+    .select("id")
+    .single();
+  if (error || !row) return { error: "Something went wrong. Try again or DM us." };
   await notifyStaff(
-    `Consignment: ${f.fullName}`,
-    `${f.fullName} (${[f.email, f.socialHandle].filter(Boolean).join(", ")}) wants to consign ${f.designers}. ${photoPaths.length} photo(s).\n\n${f.items}`,
-    "/admin/consignments",
+    staffConsignment({
+      id: row.id,
+      fullName: f.fullName,
+      email: f.email,
+      socialHandle: f.socialHandle,
+      designers: f.designers,
+      items: f.items,
+      estimatedValue: f.estimatedValue,
+      photoCount: photoPaths.length,
+    }),
   );
+  await notify({ email: f.email }, consignmentReceived({ fullName: f.fullName, designers: f.designers }));
   return { ok: true };
 }

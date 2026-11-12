@@ -53,7 +53,7 @@ export default async function Home() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/20 to-ink/10 md:bg-gradient-to-r md:from-ink/70 md:via-ink/25 md:to-transparent" />
         <div className="relative mx-auto flex min-h-[calc(100svh-4.5rem)] max-w-7xl flex-col justify-end gap-8 px-4 pb-12 pt-32 md:px-8 md:pb-20">
-          <h1 className="display text-[19vw] md:text-[9vw] xl:text-[9.5rem]">As you can see.</h1>
+          <h1 className="display text-[19vw] md:text-[9vw] xl:text-[9.5rem]">As You Can See.</h1>
           <p className="max-w-md text-lg text-paper/85">
             Archive and runway pieces for the discerning eye. Buy, rent, sell, or try them on in the showroom.
           </p>

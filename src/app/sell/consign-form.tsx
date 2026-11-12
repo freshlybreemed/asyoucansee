@@ -121,10 +121,7 @@ export function ConsignForm() {
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <input name="estimatedValue" placeholder="Rough total value (optional)" className={field} />
-        <input name="photosUrl" placeholder="Or a link to more photos (optional)" className={field} />
-      </div>
+      <input name="photosUrl" placeholder="Or a link to more photos (optional)" className={field} />
       {(uploadError || state.error) && <p className="text-sm text-red-700">{uploadError ?? state.error}</p>}
       <button disabled={pending} className="btn w-full">
         {uploading ? "Uploading photos…" : submitting ? "Sending…" : "Submit your pieces"}

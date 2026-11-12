@@ -53,6 +53,7 @@ export interface ShopifyPiece {
   vendor: string;
   imageUrl: string | null;
   priceCents: number;
+  categoryId: string | null;
 }
 
 const PRODUCTS_QUERY = `
@@ -61,6 +62,7 @@ const PRODUCTS_QUERY = `
       pageInfo { hasNextPage endCursor }
       nodes {
         id title vendor
+        category { id }
         featuredMedia { preview { image { url } } }
         variants(first: 1) { nodes { id price inventoryItem { id } } }
       }
@@ -74,6 +76,7 @@ type ProductsResponse = {
       id: string;
       title: string;
       vendor: string;
+      category: { id: string } | null;
       featuredMedia: { preview: { image: { url: string } | null } | null } | null;
       variants: { nodes: { id: string; price: string; inventoryItem: { id: string } }[] };
     }[];
@@ -100,6 +103,7 @@ export async function fetchAllPieces(search = "status:active AND inventory_total
         vendor: p.vendor,
         imageUrl: p.featuredMedia?.preview?.image?.url ?? null,
         priceCents: Math.round(parseFloat(v.price) * 100),
+        categoryId: p.category?.id ?? null,
       });
     }
     cursor = data.products.pageInfo.hasNextPage ? data.products.pageInfo.endCursor : null;

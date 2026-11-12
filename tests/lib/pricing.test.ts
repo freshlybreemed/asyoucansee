@@ -25,9 +25,14 @@ describe("quoteRental", () => {
     expect(q.totalCents).toBe(4000);
   });
 
+  it("counts nights: next-day return is one day", () => {
+    expect(quoteRental({ ...base, dueOn: "2026-11-04" }).days).toBe(1);
+    expect(quoteRental({ ...base, dueOn: "2026-11-05" }).days).toBe(2);
+  });
+
   it("discounts longer rentals by bracket", () => {
     // 10 days: 3×1 + 4×0.8 + 3×0.6 = 8.0 day-equivalents
-    const q = quoteRental({ ...base, dueOn: "2026-11-12" });
+    const q = quoteRental({ ...base, dueOn: "2026-11-13" });
     expect(q.days).toBe(10);
     expect(q.totalCents).toBe(32_000);
   });

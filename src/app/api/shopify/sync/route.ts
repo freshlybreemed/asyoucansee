@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { categoryOf } from "@/lib/catalog/categories";
 import { isRentalOnly } from "@/lib/catalog-format";
 import { env } from "@/lib/env";
 import { fetchAllPieces } from "@/lib/shopify/admin";
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
         vendor: p.vendor,
         image_url: p.imageUrl,
         retail_price_cents: p.priceCents,
+        category: categoryOf(p.categoryId),
         updated_at: new Date().toISOString(),
       })),
       { onConflict: "shopify_product_id" },

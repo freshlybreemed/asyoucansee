@@ -1,4 +1,5 @@
 import { AdminError } from "@/components/admin-error";
+import { SaveButton } from "@/components/save-button";
 import { PHOTO_BUCKET } from "@/lib/consignment-photos";
 import { createAdminClient } from "@/lib/supabase/server";
 import { setConsignmentStatus } from "../actions";
@@ -26,7 +27,7 @@ export default async function AdminConsignments({ searchParams }: { searchParams
       {!data?.length && <p className="text-sm text-neutral-500">No submissions yet.</p>}
       <ul className="divide-y border">
         {data?.map((c) => (
-          <li key={c.id} className="grid gap-4 p-4 text-sm md:grid-cols-[1fr_18rem]">
+          <li key={c.id} id={`consignment-${c.id}`} className="scroll-mt-24 grid gap-4 p-4 target:bg-rose/20 text-sm md:grid-cols-[1fr_18rem]">
             <div className="space-y-1">
               <p className="font-medium">
                 {c.full_name} <span className="font-normal text-neutral-400">· {new Date(c.created_at).toLocaleDateString()}</span>
@@ -51,14 +52,14 @@ export default async function AdminConsignments({ searchParams }: { searchParams
                 <a href={c.photos_url} target="_blank" rel="noreferrer" className="underline">More photos</a>
               )}
             </div>
-            <form action={setConsignmentStatus.bind(null, c.id)} className="space-y-2">
+            <form key={`${c.status}:${c.internal_notes ?? ""}`} action={setConsignmentStatus.bind(null, c.id)} className="space-y-2">
               <select name="status" defaultValue={c.status} className="w-full border px-2 py-1.5">
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>{s.replace("_", " ")}</option>
                 ))}
               </select>
               <textarea name="notes" defaultValue={c.internal_notes ?? ""} rows={3} placeholder="Internal notes" className="w-full border px-2 py-1.5" />
-              <button className="w-full bg-black py-2 text-xs uppercase tracking-widest text-white">Save</button>
+              <SaveButton className="w-full bg-black py-2 text-xs uppercase tracking-widest text-white" />
             </form>
           </li>
         ))}

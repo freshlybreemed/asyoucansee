@@ -2,7 +2,7 @@
 
 Rental system for the As You Can See showroom. [asyoucansee.com](https://asyoucansee.com) (Shopify) stays the store; this app handles member accounts, rental quotes, cards on file, late fees, and notifications.
 
-**Stack:** Next.js 15 (App Router) · Supabase (auth + Postgres) · Stripe (saved cards, off-session charges) · Shopify Admin API · Resend (email) · Twilio (SMS) · Vercel (hosting + cron)
+**Stack:** Next.js 15 (App Router) · Supabase (auth + Postgres) · Stripe (saved cards, off-session charges) · Shopify Admin API · Mailgun (email) · Twilio (SMS) · Vercel (hosting + cron)
 
 ## How it works
 

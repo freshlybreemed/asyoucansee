@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { safeNext } from "@/lib/next-path";
 import { createAdminClient, createUserClient } from "@/lib/supabase/server";
 
 const SignupSchema = z.object({
@@ -10,11 +11,6 @@ const SignupSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
   phone: z.string().trim().optional(),
   socialHandle: z.string().trim().optional(),
-  addressLine1: z.string().trim().min(1, "Address is required"),
-  addressLine2: z.string().trim().optional(),
-  city: z.string().trim().min(1),
-  region: z.string().trim().min(1),
-  postalCode: z.string().trim().min(1),
   smsOptIn: z.boolean(),
 });
 
@@ -50,11 +46,6 @@ export async function signUp(_prev: SignupState, form: FormData): Promise<Signup
     email: f.email,
     phone: f.phone || null,
     social_handle: f.socialHandle || null,
-    address_line1: f.addressLine1,
-    address_line2: f.addressLine2 || null,
-    city: f.city,
-    region: f.region,
-    postal_code: f.postalCode,
     sms_opt_in: f.smsOptIn,
   });
   if (profileError) {
@@ -66,5 +57,5 @@ export async function signUp(_prev: SignupState, form: FormData): Promise<Signup
   const { error: signInError } = await supabase.auth.signInWithPassword({ email: f.email, password: f.password });
   if (signInError) return { error: signInError.message };
 
-  redirect("/account");
+  redirect(safeNext(form.get("next")));
 }
