@@ -26,8 +26,9 @@ export type RentalRow = {
 /**
  * Charge the saved card for any unpaid quote and hold the piece off Shopify. Returns the rental fields to write.
  * Checks for overlapping bookings first so nobody is charged for dates that can't be honoured.
+ * Only the member's own "pay" action charges (charge: true); staff confirmations never touch the card.
  */
-export async function chargeAndHold(db: SupabaseClient, r: RentalRow): Promise<Record<string, unknown>> {
+export async function chargeAndHold(db: SupabaseClient, r: RentalRow, { charge }: { charge: boolean }): Promise<Record<string, unknown>> {
   if (r.quoted_cents == null) throw new Error("Set a price before confirming");
   const { data: clash } = await db
     .from("rentals")
@@ -42,7 +43,7 @@ export async function chargeAndHold(db: SupabaseClient, r: RentalRow): Promise<R
 
   const update: Record<string, unknown> = {};
   const member = r.profiles;
-  if (stripeEnabled() && member?.stripe_customer_id && member.has_card_on_file && r.quoted_cents > r.paid_cents) {
+  if (charge && stripeEnabled() && member?.stripe_customer_id && member.has_card_on_file && r.quoted_cents > r.paid_cents) {
     await chargeSavedCard(member.stripe_customer_id, r.quoted_cents - r.paid_cents, `Rental: ${r.pieces?.title}`, `rental-${r.id}-${r.quoted_cents}`);
     Object.assign(update, { paid_cents: r.quoted_cents, paid_at: new Date().toISOString(), payment_method: "stripe" });
   }

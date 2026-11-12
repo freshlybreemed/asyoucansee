@@ -5,7 +5,7 @@ import { CATEGORIES, isCategoryKey } from "@/lib/catalog/categories";
 import { stripeEnabled } from "@/lib/admin";
 import { displayTitle, formatMoney } from "@/lib/catalog-format";
 import { createAdminClient } from "@/lib/supabase/server";
-import { allowedActions, balanceCents, type RentalAction, type RentalStatus } from "@/lib/rental-status";
+import { allowedActions, balanceCents, rateSettled, type RentalAction, type RentalStatus } from "@/lib/rental-status";
 import { markPaid, rentalAction, setQuote } from "./actions";
 
 const COLUMNS: { status: RentalStatus; label: string }[] = [
@@ -164,17 +164,22 @@ export default async function AdminRentals({ searchParams }: { searchParams: Pro
                           </SaveButton>
                         </form>
                       )}
-                      {allowedActions(r.status).map((a) => (
-                        <form key={a} action={rentalAction.bind(null, r.id, a)}>
-                          <button
-                            className={`px-3 py-2 text-xs uppercase tracking-widest ${
-                              a === "decline" || a === "cancel" ? "border" : "bg-black text-white"
-                            }`}
-                          >
-                            {ACTION_LABEL[a]}
-                          </button>
-                        </form>
-                      ))}
+                      {r.status === "quoted" && !rateSettled(r) && (
+                        <span className="self-center text-xs text-neutral-500">Waiting on member to pay</span>
+                      )}
+                      {allowedActions(r.status)
+                        .filter((a) => a !== "confirm" || rateSettled(r))
+                        .map((a) => (
+                          <form key={a} action={rentalAction.bind(null, r.id, a)}>
+                            <button
+                              className={`px-3 py-2 text-xs uppercase tracking-widest ${
+                                a === "decline" || a === "cancel" ? "border" : "bg-black text-white"
+                              }`}
+                            >
+                              {ACTION_LABEL[a]}
+                            </button>
+                          </form>
+                        ))}
                       {balance > 0 && (
                         <>
                           <form action={markPaid.bind(null, r.id, "in_person")}>

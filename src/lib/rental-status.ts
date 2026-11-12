@@ -27,3 +27,11 @@ export function allowedActions(current: RentalStatus): RentalAction[] {
 export function balanceCents(r: { quoted_cents: number | null; late_fee_cents: number; paid_cents: number; late_fees_paid_cents: number }) {
   return Math.max(0, (r.quoted_cents ?? 0) - r.paid_cents) + Math.max(0, r.late_fee_cents - r.late_fees_paid_cents);
 }
+
+/**
+ * Staff can only confirm a quoted rental once the rate is settled: the member paid it themselves (which confirms
+ * automatically) or staff recorded it as paid in person / comp. Staff never charge a member's card for the rate.
+ */
+export function rateSettled(r: { quoted_cents: number | null; paid_cents: number }): boolean {
+  return r.quoted_cents != null && r.paid_cents >= r.quoted_cents;
+}

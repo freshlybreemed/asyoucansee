@@ -10,7 +10,7 @@ import * as emails from "@/lib/email/templates";
 import type { EmailContent } from "@/lib/email/layout";
 import { notify } from "@/lib/notify";
 import type { RelationshipTier } from "@/lib/pricing";
-import { nextStatus, type RentalAction } from "@/lib/rental-status";
+import { nextStatus, rateSettled, type RentalAction } from "@/lib/rental-status";
 import { chargeAndHold, RENTAL_SELECT, rentalEmailData, type RentalRow } from "@/lib/rentals";
 import { adjustAvailable } from "@/lib/shopify/admin";
 
@@ -34,8 +34,9 @@ export async function rentalAction(rentalId: string, action: RentalAction) {
     let message: EmailContent | null = null;
 
     if (action === "confirm") {
-      Object.assign(update, await chargeAndHold(db, r));
-      message = emails.rentalConfirmed(emailData, (update.paid_cents as number | undefined) ?? (r.paid_cents || undefined));
+      if (!rateSettled(r)) throw new Error("Waiting on the member to pay. If they paid another way, mark it paid or comp first.");
+      Object.assign(update, await chargeAndHold(db, r, { charge: false }));
+      message = emails.rentalConfirmed(emailData, r.paid_cents || undefined);
     }
     if (action === "decline") {
       message = emails.rentalDeclined(emailData);

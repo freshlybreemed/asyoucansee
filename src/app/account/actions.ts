@@ -89,7 +89,7 @@ export async function payRental(rentalId: string): Promise<{ ok?: true; error?: 
   if (!r.profiles?.has_card_on_file) return { error: "Add a card above first." };
 
   try {
-    const update = await chargeAndHold(db, r);
+    const update = await chargeAndHold(db, r, { charge: true });
     const { error: updateError } = await db
       .from("rentals")
       .update({ ...update, status: nextStatus(r.status, "confirm"), updated_at: new Date().toISOString() })

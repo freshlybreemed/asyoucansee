@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allowedActions, balanceCents, nextStatus } from "@/lib/rental-status";
+import { allowedActions, balanceCents, nextStatus, rateSettled } from "@/lib/rental-status";
 
 describe("rental lifecycle", () => {
   it("walks the happy path", () => {
@@ -35,5 +35,15 @@ describe("balanceCents", () => {
   });
   it("is zero when settled", () => {
     expect(balanceCents({ quoted_cents: 10_000, paid_cents: 10_000, late_fee_cents: 0, late_fees_paid_cents: 0 })).toBe(0);
+  });
+});
+
+describe("rateSettled", () => {
+  it("only lets staff confirm once the rate is fully paid", () => {
+    expect(rateSettled({ quoted_cents: null, paid_cents: 0 })).toBe(false);
+    expect(rateSettled({ quoted_cents: 12000, paid_cents: 0 })).toBe(false);
+    expect(rateSettled({ quoted_cents: 12000, paid_cents: 11999 })).toBe(false);
+    expect(rateSettled({ quoted_cents: 12000, paid_cents: 12000 })).toBe(true);
+    expect(rateSettled({ quoted_cents: 0, paid_cents: 0 })).toBe(true);
   });
 });
