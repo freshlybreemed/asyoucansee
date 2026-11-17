@@ -69,7 +69,7 @@ export function RentForm({ productId, signedIn, path }: { productId: string; sig
           <Link href={`/signup${back}`} className="btn-line w-full">Join free</Link>
         </div>
       )}
-      <p className="text-xs text-smoke">Rates depend on the piece, dates and use. Late returns are $30/day.</p>
+      <p className="text-xs text-smoke">Rates depend on the piece, dates and use. Late returns are $50/day.</p>
     </form>
   );
 }

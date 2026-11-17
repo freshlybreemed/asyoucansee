@@ -8,7 +8,7 @@ import { alreadyNotified, logNotification } from "@/lib/reminders";
 import { chargeSavedCard } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/server";
 
-/** Daily: mark overdue rentals late, charge $30/day on the card on file, and notify the member. */
+/** Daily: mark overdue rentals late, charge $50/day on the card on file, and notify the member. */
 export async function GET(request: Request) {
   if (request.headers.get("authorization") !== `Bearer ${env("CRON_SECRET")}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

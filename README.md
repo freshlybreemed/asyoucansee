@@ -10,7 +10,7 @@ Rental system for the As You Can See showroom. [asyoucansee.com](https://asyouca
 - **Pieces** are mirrored from Shopify (`POST /api/shopify/sync`). You mark which ones are rentable and can override the daily rate.
 - **Quotes** (`src/lib/pricing.ts`) = daily rate × duration discount × weekend/rush/peak timing × relationship tier (public, member, friend, family, comp). All knobs live in `PRICING`.
 - **Sold out on Shopify:** when a piece goes out, its Shopify inventory drops by 1. It goes back up on return (`adjustAvailable`).
-- **Late fees:** $30/day. A daily Vercel cron (`/api/cron/late-fees`) charges the card on file for each new late day and texts/emails the member.
+- **Late fees:** $50/day. A daily Vercel cron (`/api/cron/late-fees`) charges the card on file for each new late day and texts/emails the member.
 
 ## Setup
 

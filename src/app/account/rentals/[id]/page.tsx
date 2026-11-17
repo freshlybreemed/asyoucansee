@@ -11,8 +11,8 @@ const STATUS: Record<string, { label: string; detail: string }> = {
   requested: { label: "Requested", detail: "We're reviewing your dates and will send your rate shortly. Nothing is charged until you pay." },
   quoted: { label: "Rate ready", detail: "Pay to lock in your dates. The piece is held for you the moment you pay." },
   confirmed: { label: "Confirmed", detail: "It's yours. Pick it up at the showroom on your start date." },
-  checked_out: { label: "Out with you", detail: "Enjoy it. Bring it back by your return date; late returns are $30 per day." },
-  late: { label: "Overdue", detail: "This piece is past its return date. Late fees are $30 per day until it's back." },
+  checked_out: { label: "Out with you", detail: "Enjoy it. Bring it back by your return date; late returns are $50 per day." },
+  late: { label: "Overdue", detail: "This piece is past its return date. Late fees are $50 per day until it's back." },
   returned: { label: "Returned", detail: "We've got it back. Thank you." },
   cancelled: { label: "Cancelled", detail: "This booking is cancelled." },
 };

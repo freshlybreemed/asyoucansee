@@ -32,7 +32,7 @@ export const PRICING = {
     family: 0.5,
     comp: 0,
   } satisfies Record<RelationshipTier, number>,
-  lateFeePerDayCents: 3000,
+  lateFeePerDayCents: 5000,
 };
 
 export interface QuoteInput {

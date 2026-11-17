@@ -14,7 +14,7 @@ const steps = [
   "Pick a piece, your dates, what it's for and your budget.",
   "We reach out to work out your rate. Pay on your account to lock it in.",
   "Pick up at the showroom.",
-  "Return by the due date. Late returns are $30/day.",
+  "Return by the due date. Late returns are $50/day.",
 ];
 
 export default async function RentPage({ searchParams }: { searchParams: Promise<{ after?: string; q?: string; category?: string; designer?: string }> }) {

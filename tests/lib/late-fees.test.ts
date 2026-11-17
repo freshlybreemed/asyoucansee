@@ -6,15 +6,15 @@ describe("computeLateFee", () => {
     expect(computeLateFee({ dueOn: "2026-11-05", today: "2026-11-05" }).newFeeCents).toBe(0);
   });
 
-  it("charges $30 per day late", () => {
+  it("charges $50 per day late", () => {
     const r = computeLateFee({ dueOn: "2026-11-05", today: "2026-11-08" });
-    expect(r).toEqual({ daysLate: 3, newDays: 3, newFeeCents: 9000, chargeThrough: "2026-11-08" });
+    expect(r).toEqual({ daysLate: 3, newDays: 3, newFeeCents: 15000, chargeThrough: "2026-11-08" });
   });
 
   it("only bills days not already charged", () => {
     const r = computeLateFee({ dueOn: "2026-11-05", today: "2026-11-08", chargedThrough: "2026-11-07" });
     expect(r.newDays).toBe(1);
-    expect(r.newFeeCents).toBe(3000);
+    expect(r.newFeeCents).toBe(5000);
   });
 
   it("is idempotent when run twice the same day", () => {

@@ -80,7 +80,7 @@ export function rentalConfirmed(r: RentalEmailData, paidCents?: number): EmailCo
     piece: r.piece,
     details: [orderLine(r), ...dates(r), ...(paidCents ? [["Paid", formatMoney(paidCents)] as [string, string]] : [])],
     cta: { label: "View your rental", url: rentalUrl(r.id) },
-    note: "Late returns are $30 per day, charged to your card on file.",
+    note: "Late returns are $50 per day, charged to your card on file.",
   });
 }
 
@@ -122,7 +122,7 @@ export function rentalCheckedOut(r: RentalEmailData): EmailContent {
     piece: r.piece,
     details: [orderLine(r), ["Due back", formatDay(r.dueOn)]],
     cta: { label: "View your rental", url: rentalUrl(r.id) },
-    note: "Late returns are $30 per day, charged to your card on file.",
+    note: "Late returns are $50 per day, charged to your card on file.",
   });
 }
 
@@ -155,27 +155,27 @@ export function rentalReturnReminder(r: RentalEmailData, when: "due_tomorrow" | 
     piece: r.piece,
     details: [orderLine(r), ["Due back", formatDay(r.dueOn)]],
     cta: { label: "View your rental", url: rentalUrl(r.id) },
-    note: "Late returns are $30 per day, charged to your card on file.",
-    sms: `As You Can See: ${pieceName(r)} is due back ${today ? "today" : "tomorrow"} (${formatDay(r.dueOn)}). Late returns are $30/day. ${rentalUrl(r.id)}`,
+    note: "Late returns are $50 per day, charged to your card on file.",
+    sms: `As You Can See: ${pieceName(r)} is due back ${today ? "today" : "tomorrow"} (${formatDay(r.dueOn)}). Late returns are $50/day. ${rentalUrl(r.id)}`,
   });
 }
 
 export function rentalOverdue(r: RentalEmailData, daysLate: number, totalLateFeeCents: number, chargeFailed = false): EmailContent {
   return renderEmail({
     subject: `Overdue: ${pieceName(r)} was due ${formatDay(r.dueOn)}`,
-    preheader: `${daysLate} day${daysLate === 1 ? "" : "s"} late. $30 per day until it's back.`,
+    preheader: `${daysLate} day${daysLate === 1 ? "" : "s"} late. $50 per day until it's back.`,
     eyebrow: `Overdue · ${rentalRef(r.id)}`,
     heading: "This one's overdue.",
     paragraphs: [
       chargeFailed
-        ? `${pieceName(r)} was due back ${formatDay(r.dueOn)}. Late returns are $30 per day until it's returned. We couldn't charge your card on file, so the balance will be settled when you bring it back.`
-        : `${pieceName(r)} was due back ${formatDay(r.dueOn)}. Late returns are $30 per day, charged to your card on file until it's returned.`,
+        ? `${pieceName(r)} was due back ${formatDay(r.dueOn)}. Late returns are $50 per day until it's returned. We couldn't charge your card on file, so the balance will be settled when you bring it back.`
+        : `${pieceName(r)} was due back ${formatDay(r.dueOn)}. Late returns are $50 per day, charged to your card on file until it's returned.`,
       "Bring it to the showroom as soon as you can, or reply if something's come up.",
     ],
     piece: r.piece,
     details: [orderLine(r), ["Was due", formatDay(r.dueOn)], ["Days late", String(daysLate)], ["Late fees so far", formatMoney(totalLateFeeCents)]],
     cta: { label: "View your rental", url: rentalUrl(r.id) },
-    sms: `As You Can See: ${pieceName(r)} was due ${formatDay(r.dueOn)} and is ${daysLate} day(s) late. $30/day until returned. ${rentalUrl(r.id)}`,
+    sms: `As You Can See: ${pieceName(r)} was due ${formatDay(r.dueOn)} and is ${daysLate} day(s) late. $50/day until returned. ${rentalUrl(r.id)}`,
   });
 }
 

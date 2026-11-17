@@ -25,7 +25,7 @@ export function ProductCard({ product, sold = false }: { product: CatalogProduct
             alt=""
             fill
             sizes="(min-width: 1024px) 25vw, 50vw"
-            className="object-contain p-[8%] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            className="object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
           />
         )}
         {(sold || rentalOnly) && (
